@@ -17,6 +17,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.5.0",
     "@tanstack/react-query": "^5.25.0",
     "argon2": "^0.40.1",

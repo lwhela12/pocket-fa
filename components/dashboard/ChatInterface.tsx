@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchApi } from '../../lib/api-utils'; // Add this import
 
 type Message = {
   id: string;
@@ -36,7 +37,7 @@ export default function ChatInterface() {
     }
   }, [messages]);
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => { // Make this async
     if (e) e.preventDefault();
     
     if (!input.trim()) return;
@@ -49,45 +50,49 @@ export default function ChatInterface() {
     };
     
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsTyping(true);
     
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await fetchApi<{ message: string }>('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: currentInput }),
+      });
+
+      let aiText = "Sorry, I couldn't get a response. Please try again.";
+      if (response.success && response.data) {
+        aiText = response.data.message;
+      } else if (response.error) {
+        aiText = response.error;
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
-        text: getAIResponse(input),
+        text: aiText,
         timestamp: new Date(),
       };
       
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: "I'm having trouble connecting. Please try again later.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 2000);
+    }
   };
 
   const handleExampleClick = (prompt: string) => {
     setInput(prompt);
-    handleSendMessage();
-  };
-
-  const getAIResponse = (query: string): string => {
-    // In a real app, this would call the API with the Gemini model
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('retirement') || lowerQuery.includes('on track')) {
-      return "Based on your current savings of $120,000 and monthly contributions of $1,000, you're on track to reach about 75% of your retirement goal. I recommend increasing your savings rate by 3-5% if possible to close the gap.";
-    }
-    
-    if (lowerQuery.includes('debt') || lowerQuery.includes('pay off')) {
-      return "Looking at your debts, I'd recommend focusing on your credit card debt first (15.99% APR). By increasing your monthly payment from $300 to $500, you could pay it off in 14 months instead of 24 months, saving about $450 in interest.";
-    }
-    
-    if (lowerQuery.includes('savings rate') || lowerQuery.includes('save more')) {
-      return "For someone in your age bracket and income level, a savings rate of 15-20% is typically recommended. You're currently at 12%. Increasing automatic transfers to your investment accounts by $200-$300 per month would help you reach the optimal range.";
-    }
-    
-    return "I'd need more information about your financial situation to answer that accurately. Could you provide more details about your income, expenses, and financial goals?";
+    // Consider focusing the input and letting the user send, or send directly:
+    // handleSendMessage(); 
   };
 
   return (
