@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String
+  mfaEnabled       Boolean  @default(false)
+  mfaType          String?  // "sms" or "app"
+  phoneNumber      String?
+  mfaSecret        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  profile          Profile?
+  assets           Asset[]
+  debts            Debt[]
+  expenseRecords   ExpenseRecord[]
+  insurancePolicies InsurancePolicy[]
+  financialGoals   FinancialGoal[]
+}
+
+model Profile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age              Int?
+  retirementAge    Int?
+  riskTolerance    String?  // "Conservative", "Moderate", "Aggressive"
+  inflationRate    Float?   @default(3.0)
+  investmentReturn Float?   @default(7.0)
+  savingsRate      Float?   @default(10.0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Asset {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String   // "Cash", "Investment"
+  subtype          String?  // "Checking", "Savings", "Roth IRA", "Traditional IRA", "401(k)", "Taxable"
+  name             String
+  balance          Float
+  interestRate     Float?
+  annualContribution Float?
+  growthRate       Float?
+  assetClass       String?  // "Stocks", "Bonds", "ETFs", "Mutual Funds"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Debt {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String   // "Credit Card", "Mortgage", "Student Loan", "Auto Loan"
+  lender           String
+  balance          Float
+  interestRate     Float
+  monthlyPayment   Float
+  termLength       Int?     // in months
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ExpenseRecord {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDetailed       Boolean  @default(false)
+  totalMonthly     Float?
+  housing          Float?
+  utilities        Float?
+  groceries        Float?
+  dining           Float?
+  transport        Float?
+  healthcare       Float?
+  entertainment    Float?
+  miscellaneous    Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model InsurancePolicy {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String   // "Life", "Disability", "Long-Term Care"
+  coverage         Float
+  isEmployerProvided Boolean @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model FinancialGoal {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  targetAmount     Float
+  currentAmount    Float
+  targetDate       DateTime?
+  isActive         Boolean  @default(true)
+  priority         Int      @default(1) // 1 (highest) to 5 (lowest)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
