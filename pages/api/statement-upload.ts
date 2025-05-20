@@ -40,8 +40,30 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
     ],
   });
 
-  const text = result.response.text();
-  return JSON.parse(text);
+  if (result.response.promptFeedback && result.response.promptFeedback.blockReason) {
+    console.error('Gemini response blocked:', result.response.promptFeedback.blockReason, result.response.promptFeedback.safetyRatings);
+    throw new Error(`AI response was blocked due to: ${result.response.promptFeedback.blockReason}`);
+  }
+
+  const rawText = result.response.text();
+  let jsonString = rawText;
+  const match = rawText.match(/```json\n([\s\S]*?)\n```/);
+  if (match && match[1]) {
+    jsonString = match[1];
+  }
+  jsonString = jsonString.trim();
+
+  if (!jsonString) {
+    console.error('Gemini response did not contain a valid JSON block. Raw response:', rawText);
+    throw new Error('Failed to extract valid JSON from AI response.');
+  }
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (e: any) {
+    console.error('Failed to parse JSON from Gemini. Cleaned text was:', jsonString, 'Original text was:', rawText, 'Error:', e);
+    throw new Error(`AI response was not valid JSON: ${e.message}`);
+  }
 }
 
 export default createApiHandler<ParsedStatement>(async (

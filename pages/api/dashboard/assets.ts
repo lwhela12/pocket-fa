@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import type { NextApiRequest, NextApiResponse } from 'next';
 import type { Asset } from '@prisma/client';
 import { createApiHandler, ApiResponse, authenticate } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
