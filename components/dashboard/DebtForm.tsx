@@ -90,6 +90,11 @@ const DebtForm = ({ onSubmit, onCancel, initialValues, isSubmitting }: DebtFormP
       monthlyPayment: parseFloat(formData.monthlyPayment),
       termLength: formData.termLength ? parseInt(formData.termLength) : null,
     };
+
+    if (initialValues?.statementPath) {
+      (debtData as any).statementPath = initialValues.statementPath;
+      (debtData as any).statementName = initialValues.statementName;
+    }
     
     onSubmit(debtData);
   };

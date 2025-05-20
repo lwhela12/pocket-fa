@@ -98,6 +98,11 @@ const AssetForm = ({ onSubmit, onCancel, initialValues, isSubmitting }: AssetFor
       annualContribution: formData.annualContribution ? parseFloat(formData.annualContribution) : null,
       growthRate: formData.growthRate ? parseFloat(formData.growthRate) : null,
     };
+
+    if (initialValues?.statementPath) {
+      (assetData as any).statementPath = initialValues.statementPath;
+      (assetData as any).statementName = initialValues.statementName;
+    }
     
     onSubmit(assetData);
   };

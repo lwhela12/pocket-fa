@@ -54,6 +54,8 @@ model Asset {
   annualContribution Float?
   growthRate       Float?
   assetClass       String?  // "Stocks", "Bonds", "ETFs", "Mutual Funds"
+  statementPath    String?
+  statementName    String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -68,6 +70,8 @@ model Debt {
   interestRate     Float
   monthlyPayment   Float
   termLength       Int?     // in months
+  statementPath    String?
+  statementName    String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

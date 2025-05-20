@@ -29,7 +29,7 @@ export default createApiHandler<Asset | Asset[]>(async (
 
   // POST: create new asset
   if (req.method === 'POST') {
-    const { type, subtype, name, balance, interestRate, annualContribution, growthRate, assetClass } = req.body;
+    const { type, subtype, name, balance, interestRate, annualContribution, growthRate, assetClass, statementPath, statementName } = req.body;
     if (!type || !name || balance === undefined) {
       return res.status(400).json({ success: false, error: 'Type, name, and balance are required' });
     }
@@ -44,6 +44,8 @@ export default createApiHandler<Asset | Asset[]>(async (
         annualContribution: annualContribution !== undefined ? parseFloat(annualContribution) : null,
         growthRate: growthRate !== undefined ? parseFloat(growthRate) : null,
         assetClass,
+        statementPath,
+        statementName,
       },
     });
     return res.status(201).json({ success: true, data: asset });
@@ -59,7 +61,7 @@ export default createApiHandler<Asset | Asset[]>(async (
     if (!existing || existing.userId !== userId) {
       return res.status(404).json({ success: false, error: 'Asset not found' });
     }
-    const { type, subtype, name, balance, interestRate, annualContribution, growthRate, assetClass } = req.body;
+    const { type, subtype, name, balance, interestRate, annualContribution, growthRate, assetClass, statementPath, statementName } = req.body;
     const updated = await prisma.asset.update({
       where: { id: id as string },
       data: {
@@ -71,6 +73,8 @@ export default createApiHandler<Asset | Asset[]>(async (
         annualContribution: annualContribution !== undefined ? parseFloat(annualContribution) : existing.annualContribution,
         growthRate: growthRate !== undefined ? parseFloat(growthRate) : existing.growthRate,
         assetClass: assetClass ?? existing.assetClass,
+        statementPath: statementPath ?? existing.statementPath,
+        statementName: statementName ?? existing.statementName,
       },
     });
     return res.status(200).json({ success: true, data: updated });
