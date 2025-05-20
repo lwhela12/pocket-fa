@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import Modal from '../../../components/layout/Modal';
 import DebtForm from '../../../components/dashboard/DebtForm';
+import AssetForm from '../../../components/dashboard/AssetForm';
+import StatementUploadModal, { ParsedStatement } from '../../../components/dashboard/StatementUploadModal';
 import { NextPageWithLayout } from '../../_app';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchApi } from '../../../lib/api-utils';
@@ -27,6 +29,11 @@ const Debts: NextPageWithLayout = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [editingAsset, setEditingAsset] = useState<any | null>(null);
+  const [modalType, setModalType] = useState<'debt' | 'asset'>('debt');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [parsedDebt, setParsedDebt] = useState<any | null>(null);
+  const [parsedAsset, setParsedAsset] = useState<any | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [debtToDelete, setDebtToDelete] = useState<Debt | null>(null);
   
@@ -79,6 +86,25 @@ const Debts: NextPageWithLayout = () => {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddAssetFromStatement = async (asset: any) => {
+    try {
+      setIsSubmitting(true);
+      const response = await fetchApi('/api/dashboard/assets', {
+        method: 'POST',
+        body: JSON.stringify(asset),
+      });
+      if (!response.success) {
+        setError(response.error || 'Failed to add asset');
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+      setParsedAsset(null);
     }
   };
   
@@ -148,6 +174,20 @@ const Debts: NextPageWithLayout = () => {
     return (totalMonthlyPayment / monthlyIncome) * 100;
   };
 
+  const handleParsedStatement = (data: ParsedStatement) => {
+    if (data.recordType === 'debt' && data.debt) {
+      setModalType('debt');
+      setParsedDebt(data.debt);
+      setEditingDebt(null);
+      setIsModalOpen(true);
+    } else if (data.recordType === 'asset' && data.asset) {
+      setModalType('asset');
+      setParsedAsset(data.asset);
+      setEditingAsset(null);
+      setIsModalOpen(true);
+    }
+  };
+
   // Show loading spinner while checking authentication
   if (loading || !user) {
     return (
@@ -162,20 +202,27 @@ const Debts: NextPageWithLayout = () => {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Your Debts</h1>
           <p className="mt-1 text-gray-600">Manage and track your debts</p>
         </div>
-        <button 
-          className="btn btn-primary"
-          onClick={() => {
-            setEditingDebt(null);
-            setIsModalOpen(true);
-          }}
-        >
-          Add New Debt
-        </button>
+        <div className="flex gap-2">
+          <button className="btn btn-secondary" onClick={() => setIsUploadModalOpen(true)}>
+            Upload Statement
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setModalType('debt');
+              setEditingDebt(null);
+              setParsedDebt(null);
+              setIsModalOpen(true);
+            }}
+          >
+            Add New Debt
+          </button>
+        </div>
       </div>
       
       {error && (
@@ -352,24 +399,53 @@ const Debts: NextPageWithLayout = () => {
         </motion.div>
       )}
       
-      {/* Add/Edit Debt Modal */}
+      {/* Add/Edit Modal (Debt or Asset) */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setEditingDebt(null);
+          setEditingAsset(null);
+          setParsedAsset(null);
+          setParsedDebt(null);
         }}
-        title={editingDebt ? 'Edit Debt' : 'Add New Debt'}
+        title={modalType === 'debt' ? (editingDebt ? 'Edit Debt' : 'Add New Debt') : 'Add New Asset'}
         maxWidth="max-w-2xl"
       >
-        <DebtForm
-          onSubmit={editingDebt ? handleEditDebt : handleAddDebt}
-          onCancel={() => {
-            setIsModalOpen(false);
-            setEditingDebt(null);
-          }}
-          initialValues={editingDebt}
-          isSubmitting={isSubmitting}
+        {modalType === 'debt' ? (
+          <DebtForm
+            onSubmit={editingDebt ? handleEditDebt : handleAddDebt}
+            onCancel={() => {
+              setIsModalOpen(false);
+              setEditingDebt(null);
+              setParsedDebt(null);
+            }}
+            initialValues={parsedDebt || editingDebt}
+            isSubmitting={isSubmitting}
+          />
+        ) : (
+          <AssetForm
+            onSubmit={handleAddAssetFromStatement}
+            onCancel={() => {
+              setIsModalOpen(false);
+              setEditingAsset(null);
+              setParsedAsset(null);
+            }}
+            initialValues={parsedAsset || editingAsset}
+            isSubmitting={isSubmitting}
+          />
+        )}
+      </Modal>
+
+      {/* Statement Upload Modal */}
+      <Modal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        title="Upload Statement"
+      >
+        <StatementUploadModal
+          onClose={() => setIsUploadModalOpen(false)}
+          onParsed={handleParsedStatement}
         />
       </Modal>
       
