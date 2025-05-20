@@ -1,10 +1,34 @@
 import { useState } from 'react';
 import { fetchApi } from '../../lib/api-utils';
 
+export interface AssetData {
+  type: string;
+  subtype?: string;
+  name: string;
+  balance: number;
+  interestRate?: number;
+  annualContribution?: number;
+  growthRate?: number;
+  assetClass?: string;
+  statementPath?: string;
+  statementName?: string;
+}
+
+export interface DebtData {
+  type: string;
+  lender: string;
+  balance: number;
+  interestRate: number;
+  monthlyPayment: number;
+  termLength?: number;
+  statementPath?: string;
+  statementName?: string;
+}
+
 export interface ParsedStatement {
-  recordType: 'asset' | 'debt';
-  asset?: any;
-  debt?: any;
+  recordType: 'asset' | 'debt' | null;
+  asset?: AssetData;
+  debt?: DebtData;
 }
 
 interface Props {

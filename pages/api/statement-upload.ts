@@ -4,10 +4,34 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import fs from 'fs';
 import path from 'path';
 
+interface AssetData {
+  type: string;
+  subtype?: string;
+  name: string;
+  balance: number;
+  interestRate?: number;
+  annualContribution?: number;
+  growthRate?: number;
+  assetClass?: string;
+  statementPath?: string;
+  statementName?: string;
+}
+
+interface DebtData {
+  type: string;
+  lender: string;
+  balance: number;
+  interestRate: number;
+  monthlyPayment: number;
+  termLength?: number;
+  statementPath?: string;
+  statementName?: string;
+}
+
 interface ParsedStatement {
-  recordType: 'asset' | 'debt';
-  asset?: any;
-  debt?: any;
+  recordType: 'asset' | 'debt' | null;
+  asset?: AssetData;
+  debt?: DebtData;
 }
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
@@ -38,19 +62,37 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
     pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
   }
 
-  const prompt = `
-You are a financial document analysis assistant.
-A user has uploaded a PDF statement.  Determine if it is an asset or liability,
-extract the relevant fields, and *respond with exactly one JSON object* matching this schema:
+  const prompt = `You are a financial statement parser. Determine whether the uploaded PDF describes an asset or a debt and return ONLY one JSON object using the corresponding form fields.
+
+Asset example:
 {
-  "recordType": "asset"|"debt",
-  "asset"?: { "accountType": "string", "balance": "number", "institution": "string", "lastFourDigits"?: "string" },
-  "debt"?: { "debtType": "string", "balance": "number", "lender": "string", "interestRate"?: "number", "minimumPayment"?: "number" }
+  "recordType": "asset",
+  "asset": {
+    "type": "string",
+    "subtype": "string",
+    "name": "string",
+    "balance": 0,
+    "interestRate": 0,
+    "annualContribution": 0,
+    "growthRate": 0,
+    "assetClass": "string"
+  }
 }
-Do NOT include any extra text, markdown, or explanation—only output the JSON.
-If the document is not a recognizable financial statement or if no relevant data can be extracted, return:
-{ "recordType": null, "error": "Could not process the document or extract relevant financial data." }
-`;
+
+Debt example:
+{
+  "recordType": "debt",
+  "debt": {
+    "type": "string",
+    "lender": "string",
+    "balance": 0,
+    "interestRate": 0,
+    "monthlyPayment": 0,
+    "termLength": 0
+  }
+}
+
+If nothing can be extracted, return { "recordType": null, "error": "Could not process the document." }. Do not include markdown or explanations.`;
   
   const result = await model.generateContent({
     contents: [
@@ -109,9 +151,23 @@ export default createApiHandler<ParsedStatement>(async (
   const buffer = Buffer.from(file, 'base64');
   const tempPath = path.join('/tmp', `${userId}-${Date.now()}-${filename}`);
   await fs.promises.writeFile(tempPath, buffer);
+  const publicDir = path.join(process.cwd(), 'public', 'statements');
+  await fs.promises.mkdir(publicDir, { recursive: true });
+  const destName = `${userId}-${Date.now()}-${filename}`;
+  const destPath = path.join(publicDir, destName);
+  const relativePath = path.join('statements', destName);
 
   try {
     const parsed = await analyzeWithGemini(tempPath);
+    await fs.promises.copyFile(tempPath, destPath);
+    if (parsed.recordType === 'asset' && parsed.asset) {
+      parsed.asset.statementPath = relativePath;
+      parsed.asset.statementName = filename;
+    }
+    if (parsed.recordType === 'debt' && parsed.debt) {
+      parsed.debt.statementPath = relativePath;
+      parsed.debt.statementName = filename;
+    }
     return res.status(200).json({ success: true, data: parsed });
   } catch (error: any) {
     console.error('Statement upload error:', error);

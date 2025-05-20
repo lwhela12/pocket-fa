@@ -23,7 +23,7 @@ export default createApiHandler<Debt | Debt[]>(async (
   }
 
   if (req.method === 'POST') {
-    const { type, lender, balance, interestRate, monthlyPayment, termLength } = req.body;
+    const { type, lender, balance, interestRate, monthlyPayment, termLength, statementPath, statementName } = req.body;
     if (!type || !lender || balance === undefined || interestRate === undefined || monthlyPayment === undefined) {
       return res.status(400).json({ success: false, error: 'Type, lender, balance, interest rate, and monthly payment are required' });
     }
@@ -36,6 +36,8 @@ export default createApiHandler<Debt | Debt[]>(async (
         interestRate: parseFloat(interestRate),
         monthlyPayment: parseFloat(monthlyPayment),
         termLength: termLength !== undefined ? (termLength ? parseInt(termLength, 10) : null) : null,
+        statementPath,
+        statementName,
       },
     });
     return res.status(201).json({ success: true, data: debt });
@@ -50,7 +52,7 @@ export default createApiHandler<Debt | Debt[]>(async (
     if (!existing || existing.userId !== userId) {
       return res.status(404).json({ success: false, error: 'Debt not found' });
     }
-    const { type, lender, balance, interestRate, monthlyPayment, termLength } = req.body;
+    const { type, lender, balance, interestRate, monthlyPayment, termLength, statementPath, statementName } = req.body;
     const updated = await prisma.debt.update({
       where: { id: id as string },
       data: {
@@ -60,6 +62,8 @@ export default createApiHandler<Debt | Debt[]>(async (
         interestRate: interestRate !== undefined ? parseFloat(interestRate) : existing.interestRate,
         monthlyPayment: monthlyPayment !== undefined ? parseFloat(monthlyPayment) : existing.monthlyPayment,
         termLength: termLength !== undefined ? (termLength ? parseInt(termLength, 10) : null) : existing.termLength,
+        statementPath: statementPath ?? existing.statementPath,
+        statementName: statementName ?? existing.statementName,
       },
     });
     return res.status(200).json({ success: true, data: updated });

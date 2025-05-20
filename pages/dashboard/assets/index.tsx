@@ -6,6 +6,7 @@ import Modal from '../../../components/layout/Modal';
 import AssetForm from '../../../components/dashboard/AssetForm';
 import DebtForm from '../../../components/dashboard/DebtForm';
 import StatementUploadModal, { ParsedStatement } from '../../../components/dashboard/StatementUploadModal';
+import ReviewButton from '../../../components/dashboard/ReviewButton';
 import { NextPageWithLayout } from '../../_app';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchApi } from '../../../lib/api-utils';
@@ -311,7 +312,11 @@ const Assets: NextPageWithLayout = () => {
                                 Edit
                               </button>
                               <span className="mx-2 text-gray-300">|</span>
-                              <button 
+                              <ReviewButton recordType="asset" record={asset} />
+                              <span className="mx-2 text-gray-300">|</span>
+                              <ReviewButton recordType="asset" record={asset} />
+                              <span className="mx-2 text-gray-300">|</span>
+                              <button
                                 className="text-red-600 hover:text-red-900"
                                 onClick={() => {
                                   setAssetToDelete(asset);
