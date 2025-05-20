@@ -15,26 +15,41 @@ const API_KEY = process.env.GEMINI_API_KEY;
 
 async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
   if (!API_KEY) throw new Error('Gemini API key not configured');
-  const genAI = new GoogleGenerativeAI(API_KEY);
+  const genAI = new GoogleGenerativeAI(API_KEY); // Corrected GoogleGenerativeAI constructor
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
   const fileData = await fs.promises.readFile(filePath);
 
-  const pdfPart =
-    fileData.length > 20 * 1024 * 1024
-      ? await genAI.files.upload({ file: fileData, config: { mimeType: 'application/pdf' } })
-      : { inlineData: { data: fileData, mimeType: 'application/pdf' } };
+  let pdfPart;
+  console.log(`File size: ${fileData.length} bytes`);
 
-  // 1) Updated prompt: force a JSON‐only response
+  if (fileData.length > 20 * 1024 * 1024) {
+    console.log('File is larger than 20MB, attempting to upload via genAI.files.upload...');
+    const uploadedFile = await genAI.files.upload({ 
+      file: fileData, 
+      config: { mimeType: 'application/pdf' } 
+    });
+    if (!uploadedFile.uri) {
+      console.error('File upload via genAI.files.upload did not return a URI.', uploadedFile);
+      throw new Error('Failed to upload large PDF to Gemini.');
+    }
+    pdfPart = { fileData: { fileUri: uploadedFile.uri, mimeType: 'application/pdf' } };
+  } else {
+    console.log('File is smaller than 20MB, using inlineData.');
+    pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
+  }
+
   const prompt = `
 You are a financial document analysis assistant.
 A user has uploaded a PDF statement.  Determine if it is an asset or liability,
 extract the relevant fields, and *respond with exactly one JSON object* matching this schema:
 {
   "recordType": "asset"|"debt",
-  "asset"?: { ... },
-  "debt"?: { ... }
+  "asset"?: { "accountType": "string", "balance": "number", "institution": "string", "lastFourDigits"?: "string" },
+  "debt"?: { "debtType": "string", "balance": "number", "lender": "string", "interestRate"?: "number", "minimumPayment"?: "number" }
 }
 Do NOT include any extra text, markdown, or explanation—only output the JSON.
+If the document is not a recognizable financial statement or if no relevant data can be extracted, return:
+{ "recordType": null, "error": "Could not process the document or extract relevant financial data." }
 `;
   
   const result = await model.generateContent({
@@ -44,7 +59,7 @@ Do NOT include any extra text, markdown, or explanation—only output the JSON.
         parts: [pdfPart, { text: prompt }],
       },
     ],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+    generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
     safetySettings: [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -52,13 +67,12 @@ Do NOT include any extra text, markdown, or explanation—only output the JSON.
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     ],
   });
-
+  console.log('Gemini response:', result.response.text());
   const rawText = result.response.text().trim();
   if (!rawText) {
     throw new Error('Received empty response from Gemini.');
   }
 
-  // 2) Try to extract JSON from ```json``` block:
   const fenced = rawText.match(/```json\s*([\s\S]*?)```/i)?.[1]?.trim();
   const candidate = fenced || rawText;
 
