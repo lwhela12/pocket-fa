@@ -19,8 +19,19 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
   const fileData = await fs.promises.readFile(filePath);
 
-  const prompt = `You are a financial document analysis assistant. A user has uploaded a financial statement in PDF format. Determine whether the statement represents an asset or a liability. Extract the account balance.\nIf it is an asset identify if it is cash or an investment. If it is cash provide the interest rate if available. If it is an investment provide the split between stocks and bonds, a risk level of Low, Medium, or High, and an expected rate of return based on that risk.\nIf it is a liability provide the minimum monthly payment and the interest rate.\nReturn a JSON object with the following structure:\n{recordType: 'asset'|'debt', asset?: {type:'Cash'|'Investment', subtype?:string, name?:string, balance:number, interestRate?:number, allocation?:{stocks:number,bonds:number}, riskLevel?:'Low'|'Medium'|'High', expectedReturn?:number}, debt?:{type?:string,lender?:string,balance:number,interestRate?:number,minimumPayment?:number}}`;
-
+  // 1) Updated prompt: force a JSON‐only response
+  const prompt = `
+You are a financial document analysis assistant.
+A user has uploaded a PDF statement.  Determine if it is an asset or liability,
+extract the relevant fields, and *respond with exactly one JSON object* matching this schema:
+{
+  "recordType": "asset"|"debt",
+  "asset"?: { ... },
+  "debt"?: { ... }
+}
+Do NOT include any extra text, markdown, or explanation—only output the JSON.
+`;
+  
   const result = await model.generateContent({
     contents: [
       {
@@ -40,28 +51,20 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
     ],
   });
 
-  if (result.response.promptFeedback && result.response.promptFeedback.blockReason) {
-    console.error('Gemini response blocked:', result.response.promptFeedback.blockReason, result.response.promptFeedback.safetyRatings);
-    throw new Error(`AI response was blocked due to: ${result.response.promptFeedback.blockReason}`);
-  }
+  const rawText = result.response.text().trim();
 
-  const rawText = result.response.text();
-  let jsonString = rawText;
-  const match = rawText.match(/```json\n([\s\S]*?)\n```/);
-  if (match && match[1]) {
-    jsonString = match[1];
-  }
-  jsonString = jsonString.trim();
-
-  if (!jsonString) {
-    console.error('Gemini response did not contain a valid JSON block. Raw response:', rawText);
-    throw new Error('Failed to extract valid JSON from AI response.');
-  }
+  // 2) Try to extract JSON from ```json``` block:
+  const fenced = rawText.match(/```json\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidate = fenced || rawText;
 
   try {
-    return JSON.parse(jsonString);
+    return JSON.parse(candidate);
   } catch (e: any) {
-    console.error('Failed to parse JSON from Gemini. Cleaned text was:', jsonString, 'Original text was:', rawText, 'Error:', e);
+    console.error(
+      'Failed to parse JSON from Gemini. Candidate text was:', candidate,
+      '\nFull raw response was:', rawText,
+      '\nError:', e
+    );
     throw new Error(`AI response was not valid JSON: ${e.message}`);
   }
 }
