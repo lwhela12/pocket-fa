@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
+import { fetchApi } from '../../lib/api-utils';
 
 export default function ProfileSetup() {
   const [age, setAge] = useState('');
@@ -21,15 +22,22 @@ export default function ProfileSetup() {
     }
     
     try {
-      // TODO: Implement actual profile setup API call
-      console.log('Profile setup with:', { age, retirementAge, riskTolerance });
-      
-      // For now, simulate a successful setup
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+      const response = await fetchApi('/api/profile', {
+        method: 'POST',
+        body: JSON.stringify({
+          age: age ? parseInt(age) : undefined,
+          retirementAge: retirementAge ? parseInt(retirementAge) : undefined,
+          riskTolerance,
+        }),
+      }, true);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Profile setup failed');
+      }
+
+      window.location.href = '/dashboard';
     } catch (err) {
-      setError('Profile setup failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Profile setup failed. Please try again.');
       setIsLoading(false);
     }
   };

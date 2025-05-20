@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
+import speakeasy from 'speakeasy';
 
 type VerifyMFAResponse = {
   token: string;
@@ -32,9 +33,15 @@ export default createApiHandler<VerifyMFAResponse>(async (
       return res.status(401).json({ success: false, error: 'Invalid user or MFA not enabled' });
     }
 
-    // In a real app, you would verify the code against the user's MFA method
-    // For this demo, we'll just accept "123456" as a valid code
-    if (code !== '123456') {
+    let isValid = false;
+    if (user.mfaType === 'app' && user.mfaSecret) {
+      isValid = speakeasy.totp.verify({ secret: user.mfaSecret, encoding: 'base32', token: code });
+    } else if (user.mfaType === 'sms') {
+      // TODO: integrate real SMS code verification via provider
+      isValid = code === '123456';
+    }
+
+    if (!isValid) {
       return res.status(401).json({ success: false, error: 'Invalid verification code' });
     }
 
