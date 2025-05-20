@@ -314,8 +314,6 @@ const Assets: NextPageWithLayout = () => {
                               <span className="mx-2 text-gray-300">|</span>
                               <ReviewButton recordType="asset" record={asset} />
                               <span className="mx-2 text-gray-300">|</span>
-                              <ReviewButton recordType="asset" record={asset} />
-                              <span className="mx-2 text-gray-300">|</span>
                               <button
                                 className="text-red-600 hover:text-red-900"
                                 onClick={() => {
@@ -361,7 +359,7 @@ const Assets: NextPageWithLayout = () => {
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{asset.annualContribution ? formatCurrency(asset.annualContribution) : '-'}</td>
                             <td className="whitespace-nowrap px-3 py-4 text-right text-sm font-medium text-gray-900">{formatCurrency(asset.balance)}</td>
                             <td className="whitespace-nowrap px-3 py-4 text-right text-sm font-medium">
-                              <button 
+                              <button
                                 className="text-primary hover:text-blue-900"
                                 onClick={() => {
                                   setEditingAsset(asset);
@@ -371,7 +369,9 @@ const Assets: NextPageWithLayout = () => {
                                 Edit
                               </button>
                               <span className="mx-2 text-gray-300">|</span>
-                              <button 
+                              <ReviewButton recordType="asset" record={asset} />
+                              <span className="mx-2 text-gray-300">|</span>
+                              <button
                                 className="text-red-600 hover:text-red-900"
                                 onClick={() => {
                                   setAssetToDelete(asset);
