@@ -19,6 +19,11 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
   const fileData = await fs.promises.readFile(filePath);
 
+  const pdfPart =
+    fileData.length > 20 * 1024 * 1024
+      ? await genAI.files.upload({ file: fileData, config: { mimeType: 'application/pdf' } })
+      : { inlineData: { data: fileData, mimeType: 'application/pdf' } };
+
   // 1) Updated prompt: force a JSON‐only response
   const prompt = `
 You are a financial document analysis assistant.
@@ -36,10 +41,7 @@ Do NOT include any extra text, markdown, or explanation—only output the JSON.
     contents: [
       {
         role: 'user',
-        parts: [
-          { text: prompt },
-          { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } },
-        ],
+        parts: [pdfPart, { text: prompt }],
       },
     ],
     generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
@@ -52,6 +54,9 @@ Do NOT include any extra text, markdown, or explanation—only output the JSON.
   });
 
   const rawText = result.response.text().trim();
+  if (!rawText) {
+    throw new Error('Received empty response from Gemini.');
+  }
 
   // 2) Try to extract JSON from ```json``` block:
   const fenced = rawText.match(/```json\s*([\s\S]*?)```/i)?.[1]?.trim();
