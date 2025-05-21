@@ -100,7 +100,7 @@ export default createApiHandler<DashboardResponse>(async (
     const yearsUntilRetirement = Math.max(0, retirementAge - age);
 
     // Calculate financial projections
-    const currentSavings = totalAssets;
+    const currentSavings = netWorth;
     const annualContribution = assets
       .filter(asset => asset.annualContribution)
       .reduce((sum, asset) => sum + (asset.annualContribution || 0), 0);

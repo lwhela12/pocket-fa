@@ -129,11 +129,14 @@ Response:
 
     const result = await chat.sendMessage(prompt); // Send the full context as the first message in a new chat
     const aiResponseText = result.response.text();
+    const finalMessage = aiResponseText && aiResponseText.trim()
+      ? aiResponseText
+      : "I'm sorry, I couldn't generate a response.";
 
     return res.status(200).json({
       success: true,
       data: {
-        message: aiResponseText,
+        message: finalMessage,
       },
     });
 

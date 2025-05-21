@@ -83,7 +83,7 @@ export default function ChatInterface() {
       });
 
       let aiText = "Sorry, I couldn't get a response. Please try again.";
-      if (response.success && response.data) {
+      if (response.success && response.data && response.data.message.trim()) {
         aiText = response.data.message;
       } else if (response.error) {
         aiText = response.error;

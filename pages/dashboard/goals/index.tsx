@@ -298,11 +298,12 @@ const Goals: NextPageWithLayout = () => {
 
   const calculateSuccessPercentage = (goal: Goal) => {
     if (!goal.targetDate) return 0;
-    const years = Math.max(0, (goal.targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365.25));
-    const relevantAssets = goal.name.toLowerCase().includes('retirement')
-      ? assets.filter(isRetirementAsset)
-      : assets.filter(a => !isRetirementAsset(a));
-    const projected = relevantAssets.map(a => ({
+    const years = Math.max(
+      0,
+      (goal.targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365.25),
+    );
+    // Use all assets for projections to keep progress consistent across goals
+    const projected = assets.map(a => ({
       balance: a.balance,
       growthRate: a.growthRate,
       interestRate: a.interestRate,
@@ -383,7 +384,11 @@ const Goals: NextPageWithLayout = () => {
         >
           {goals.length > 0 ? (
             <>
-              {goals.map(goal => {
+              {goals
+                .filter(
+                  (g, idx, arr) => arr.findIndex(o => o.id === g.id) === idx,
+                )
+                .map(goal => {
                 const progress = calculateProgress(goal.currentAmount, goal.targetAmount);
                 const monthsRemaining = goal.targetDate ? calculateMonthsRemaining(goal.targetDate) : null;
                 const monthlySavings = goal.targetDate ? calculateRequiredMonthlySavings(goal) : null;
