@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ReactElement, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/router';

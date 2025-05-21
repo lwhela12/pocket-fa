@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ReactElement, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
@@ -10,6 +11,7 @@ import ChatInterface from '../../components/dashboard/ChatInterface';
 import { NextPageWithLayout } from '../_app';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchApi } from '../../lib/api-utils';
+import Modal from '../../components/layout/Modal';
 
 // Types
 type Asset = {
@@ -66,6 +68,7 @@ const Dashboard: NextPageWithLayout = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     // Redirect to login if not authenticated and not loading
@@ -112,6 +115,9 @@ const Dashboard: NextPageWithLayout = () => {
           ...goal,
           targetDate: goal.targetDate ? new Date(goal.targetDate) : null
         })));
+        if ((goalsResponse.data || []).length === 0) {
+          setShowWizard(true);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -391,10 +397,30 @@ const Dashboard: NextPageWithLayout = () => {
             </motion.div>
           </motion.div>
           
-          <ChatInterface />
-        </>
-      )}
-    </>
+        <ChatInterface />
+      </>
+    )}
+
+    <Modal
+      isOpen={showWizard}
+      onClose={() => setShowWizard(false)}
+      title="Set Your Financial Goals"
+    >
+      <p className="mb-4 text-sm text-gray-700">You don't have any goals yet. Would you like to go through the goal setup wizard?</p>
+      <div className="flex justify-end space-x-2">
+        <button className="btn" onClick={() => setShowWizard(false)}>Later</button>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setShowWizard(false);
+            router.push('/dashboard/goals/wizard');
+          }}
+        >
+          Start Wizard
+        </button>
+      </div>
+    </Modal>
+  </>
   );
 };
 

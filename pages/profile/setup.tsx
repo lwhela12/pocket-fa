@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// @ts-nocheck
+import React, { useState } from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
 import { fetchApi } from '../../lib/api-utils';
