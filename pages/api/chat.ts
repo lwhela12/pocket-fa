@@ -10,6 +10,11 @@ type ChatResponse = {
 const MODEL_NAME = "gemini-2.5-flash-preview-04-17"; // Or your preferred Gemini model
 const API_KEY = process.env.GEMINI_API_KEY;
 
+const isRetirementAsset = (asset: { subtype?: string | null }) => {
+  const subtype = asset.subtype?.toLowerCase() || '';
+  return subtype.includes('ira') || subtype.includes('401');
+};
+
 export default createApiHandler<ChatResponse>(async (
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<ChatResponse>>
@@ -61,9 +66,19 @@ export default createApiHandler<ChatResponse>(async (
       const totalAssets = assets.reduce((sum, a) => sum + a.balance, 0);
       const totalDebts = debts.reduce((sum, d) => sum + d.balance, 0);
       const netWorth = totalAssets - totalDebts;
-      const goalsSummary = goals
-        .map(g => `- ${g.name}: $${g.currentAmount.toLocaleString()} of $${g.targetAmount.toLocaleString()}`)
-        .join('\n') || 'No goals provided.';
+      const goalsSummary =
+        goals
+          .map(g => {
+            let currentAmountForDisplay = g.currentAmount;
+            if (g.name.toLowerCase().includes('retirement')) {
+              const retirementAssetsTotal = assets
+                .filter(isRetirementAsset)
+                .reduce((sum, asset) => sum + asset.balance, 0);
+              currentAmountForDisplay = retirementAssetsTotal;
+            }
+            return `- ${g.name}: $${currentAmountForDisplay.toLocaleString()} of $${g.targetAmount.toLocaleString()}`;
+          })
+          .join('\n') || 'No goals provided.';
 
       const summary = `Here is a quick snapshot of your finances:\nTotal Assets: $${totalAssets.toLocaleString()}\nTotal Debts: $${totalDebts.toLocaleString()}\nNet Worth: $${netWorth.toLocaleString()}\n\nGoals:\n${goalsSummary}`;
 
