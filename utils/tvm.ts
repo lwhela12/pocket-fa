@@ -22,7 +22,15 @@ export function calculateGoalSuccess(
   goalYears: number,
   assets: AssetProjectionInput[],
 ): number {
-  const totalFuture = assets.reduce((sum, asset) => sum + projectAssetValue(asset, goalYears), 0);
+  const startBalance = assets.reduce((sum, asset) => sum + asset.balance, 0);
+  const totalFuture = assets.reduce(
+    (sum, asset) => sum + projectAssetValue(asset, goalYears),
+    0,
+  );
   if (goalAmount === 0) return 100;
+  // If goal date is in the past, compare current balance
+  if (goalYears <= 0) {
+    return Math.min(100, (startBalance / goalAmount) * 100);
+  }
   return Math.min(100, (totalFuture / goalAmount) * 100);
 }

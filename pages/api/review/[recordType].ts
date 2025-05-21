@@ -43,9 +43,11 @@ export default createApiHandler<string>(async (
     const abs = path.join(process.cwd(), 'public', record.statementPath);
     try {
       const data = await fs.promises.readFile(abs);
-      pdfPart = { inlineData: { data: data.toString('base64'), mimeType: 'application/pdf' } };
-    } catch {
-      // ignore missing file
+      pdfPart = {
+        inlineData: { data: data.toString('base64'), mimeType: 'application/pdf' },
+      };
+    } catch (err) {
+      console.warn('Statement file not found:', abs, err);
     }
   }
 
