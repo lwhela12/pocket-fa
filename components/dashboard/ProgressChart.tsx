@@ -3,10 +3,16 @@ import { motion } from 'framer-motion';
 type ProgressChartProps = {
   currentSavings: number;
   targetSavings: number;
+  projectedAtRetirement?: number;
   goalName?: string;
 };
 
-export default function ProgressChart({ currentSavings, targetSavings, goalName = 'Retirement' }: ProgressChartProps) {
+export default function ProgressChart({
+  currentSavings,
+  targetSavings,
+  projectedAtRetirement,
+  goalName = 'Retirement',
+}: ProgressChartProps) {
   const progressPercentage = Math.min(100, (currentSavings / targetSavings) * 100);
   
   const formatCurrency = (amount: number) => {
@@ -66,6 +72,14 @@ export default function ProgressChart({ currentSavings, targetSavings, goalName 
             {formatCurrency(Math.max(0, targetSavings - currentSavings))}
           </span>
         </div>
+        {projectedAtRetirement !== undefined && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Projected at Retirement</span>
+            <span className="font-medium text-gray-700">
+              {formatCurrency(projectedAtRetirement)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
