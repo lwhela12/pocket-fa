@@ -150,37 +150,35 @@ const Dashboard: NextPageWithLayout = () => {
     }));
   };
 
-  // Prepare financial projections data
+  // Prepare financial projections data using a fixed 7% growth rate
   const prepareFinancialProjections = () => {
-    // Calculate current savings (total assets - total debts)
     const netWorth = calculateNetWorth();
-    
-    // Estimate future growth using average growth rate of investment assets
-    // or fallback to 7% if no investment assets with growth rates
-    const investmentAssets = assets.filter(asset => asset.type === 'Investment' && asset.growthRate);
-    const avgGrowthRate = investmentAssets.length > 0
-      ? investmentAssets.reduce((sum, asset) => sum + (asset.growthRate || 0), 0) / investmentAssets.length
-      : 7; // Default 7% growth if no investment assets with growth rates
-    
-    // Calculate annual contributions
-    const annualContributions = assets
-      .filter(asset => asset.annualContribution)
-      .reduce((sum, asset) => sum + (asset.annualContribution || 0), 0);
-    
-    // Generate 30 years of projections
-    return Array.from({ length: 31 }, (_, i) => {
-      let value = netWorth;
-      // Compound the initial net worth
-      value = value * Math.pow(1 + avgGrowthRate / 100, i);
-      // Add contributions (assuming they also grow with compound interest)
-      for (let year = 0; year < i; year++) {
-        value += annualContributions * Math.pow(1 + avgGrowthRate / 100, i - year - 1);
-      }
-      return {
-        year: i,
-        value: Math.max(0, value) // Ensure no negative values
-      };
-    });
+    const growthRate = 7 / 100;
+    return Array.from({ length: 31 }, (_, i) => ({
+      year: i,
+      value: netWorth * Math.pow(1 + growthRate, i),
+    }));
+  };
+
+  const calculateCurrentSavings = () => {
+    return assets
+      .filter(a => a.type === 'Investment' || a.type === 'Cash')
+      .reduce((sum, a) => sum + a.balance, 0);
+  };
+
+  const calculateProjectedRetirementBalance = (years: number) => {
+    return assets
+      .filter(a => a.type === 'Investment' || a.type === 'Cash')
+      .reduce((sum, a) => {
+        const rate = (a.growthRate ?? 7) / 100;
+        let future = a.balance * Math.pow(1 + rate, years);
+        if (a.annualContribution) {
+          for (let i = 0; i < years; i++) {
+            future += a.annualContribution * Math.pow(1 + rate, years - i - 1);
+          }
+        }
+        return sum + future;
+      }, 0);
   };
 
   // Calculate years until retirement
@@ -242,6 +240,8 @@ const Dashboard: NextPageWithLayout = () => {
   const assetAllocation = prepareAssetAllocationData();
   const financialProjections = prepareFinancialProjections();
   const yearsUntilRetirement = calculateYearsUntilRetirement();
+  const currentSavings = calculateCurrentSavings();
+  const projectedRetirement = calculateProjectedRetirementBalance(yearsUntilRetirement);
   const priorityGoal = getHighestPriorityGoal();
 
   return (
@@ -312,9 +312,10 @@ const Dashboard: NextPageWithLayout = () => {
           >
             {priorityGoal && (
               <motion.div variants={item}>
-                <ProgressChart 
-                  currentSavings={priorityGoal.currentAmount}
+                <ProgressChart
+                  currentSavings={currentSavings}
                   targetSavings={priorityGoal.targetAmount}
+                  projectedAtRetirement={projectedRetirement}
                   goalName={priorityGoal.name}
                 />
               </motion.div>
