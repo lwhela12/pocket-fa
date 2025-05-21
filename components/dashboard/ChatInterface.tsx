@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchApi } from '../../lib/api-utils'; // Add this import
 
@@ -36,6 +37,27 @@ export default function ChatInterface() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Fetch initial snapshot when chat is opened
+  useEffect(() => {
+    if (isOpen) {
+      (async () => {
+        const response = await fetchApi<{ message: string }>('/api/chat', {
+          method: 'POST',
+          body: JSON.stringify({ message: '__init__' }),
+        });
+        if (response.success && response.data) {
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            sender: 'ai',
+            text: response.data.message,
+            timestamp: new Date(),
+          };
+          setMessages([INITIAL_MESSAGES[0], aiMessage]);
+        }
+      })();
+    }
+  }, [isOpen]);
 
   const handleSendMessage = async (e?: React.FormEvent) => { // Make this async
     if (e) e.preventDefault();
@@ -157,10 +179,11 @@ export default function ChatInterface() {
                       message.sender === 'user'
                         ? 'bg-primary text-white'
                         : 'bg-gray-200 text-gray-800'
-                    }`}
-                    style={{ maxWidth: '80%' }}
+                    } max-w-full`}
                   >
-                    <p className="text-sm">{message.text}</p>
+                    <ReactMarkdown className="prose whitespace-pre-wrap break-words text-sm">
+                      {message.text}
+                    </ReactMarkdown>
                     <p className="mt-1 text-right text-xs opacity-70">
                       {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>

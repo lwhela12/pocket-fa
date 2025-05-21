@@ -56,6 +56,20 @@ export default createApiHandler<ChatResponse>(async (
         orderBy: { priority: 'asc' }
     });
 
+    // If initializing, return a snapshot summary
+    if (userQuery === '__init__') {
+      const totalAssets = assets.reduce((sum, a) => sum + a.balance, 0);
+      const totalDebts = debts.reduce((sum, d) => sum + d.balance, 0);
+      const netWorth = totalAssets - totalDebts;
+      const goalsSummary = goals
+        .map(g => `- ${g.name}: $${g.currentAmount.toLocaleString()} of $${g.targetAmount.toLocaleString()}`)
+        .join('\n') || 'No goals provided.';
+
+      const summary = `Here is a quick snapshot of your finances:\nTotal Assets: $${totalAssets.toLocaleString()}\nTotal Debts: $${totalDebts.toLocaleString()}\nNet Worth: $${netWorth.toLocaleString()}\n\nGoals:\n${goalsSummary}`;
+
+      return res.status(200).json({ success: true, data: { message: summary } });
+    }
+
     // Construct a detailed prompt for Gemini
     let prompt = `You are PocketFA, a friendly and helpful AI financial assistant.
 A user is asking for financial advice. Here is their current financial situation:
@@ -98,10 +112,10 @@ Response:
     };
 
     const safetySettings = [
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
     ];
     
     const chat = model.startChat({

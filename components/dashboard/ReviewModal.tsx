@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import Modal from '../layout/Modal';
 import { fetchApi } from '../../lib/api-utils';
 
@@ -67,7 +68,11 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
         <div className="flex-1 overflow-y-auto space-y-2">
           {messages.map(m => (
             <div key={m.id} className={m.sender === 'user' ? 'text-right' : 'text-left'}>
-              <span className={`inline-block rounded px-3 py-2 ${m.sender === 'user' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-800'}`}>{m.text}</span>
+              <div className={`inline-block rounded px-3 py-2 ${m.sender === 'user' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-800'} max-w-full`}>
+                <ReactMarkdown className="prose whitespace-pre-wrap break-words text-sm">
+                  {m.text}
+                </ReactMarkdown>
+              </div>
             </div>
           ))}
           <div ref={endRef} />
