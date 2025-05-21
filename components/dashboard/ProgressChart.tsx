@@ -14,6 +14,10 @@ export default function ProgressChart({
   goalName = 'Retirement',
 }: ProgressChartProps) {
   const progressPercentage = Math.min(100, (currentSavings / targetSavings) * 100);
+  const projectedPercentage =
+    projectedAtRetirement !== undefined
+      ? Math.min(100, (projectedAtRetirement / targetSavings) * 100)
+      : null;
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -39,17 +43,26 @@ export default function ProgressChart({
         </div>
         
         <div className="relative mt-2">
-          <div className="h-6 w-full overflow-hidden rounded-full bg-gray-200">
-            <motion.div 
-              className="h-6 rounded-full bg-primary"
+          <div className="relative h-6 w-full overflow-hidden rounded-full bg-gray-200">
+            {projectedPercentage !== null && (
+              <motion.div
+                className="absolute left-0 top-0 h-6 rounded-full bg-green-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${projectedPercentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                style={{ zIndex: 0 }}
+              />
+            )}
+            <motion.div
+              className="absolute left-0 top-0 h-6 rounded-full bg-primary"
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
-            >
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
-                {progressPercentage.toFixed(1)}%
-              </span>
-            </motion.div>
+              style={{ zIndex: 10 }}
+            />
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
+              {progressPercentage.toFixed(1)}%
+            </span>
           </div>
           
           {/* Target line */}
@@ -63,9 +76,15 @@ export default function ProgressChart({
       
       <div className="mt-4 space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-gray-500">Progress</span>
+          <span className="text-gray-500">Current Progress</span>
           <span className="font-medium">{progressPercentage.toFixed(1)}%</span>
         </div>
+        {projectedPercentage !== null && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Projected Progress</span>
+            <span className="font-medium">{projectedPercentage.toFixed(1)}%</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-gray-500">Gap to Target</span>
           <span className="font-medium text-gray-700">

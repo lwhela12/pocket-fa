@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import Modal from '../../../components/layout/Modal';
 import GoalForm from '../../../components/dashboard/GoalForm';
+import ProgressChart from '../../../components/dashboard/ProgressChart';
 import { NextPageWithLayout } from '../../_app';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchApi } from '../../../lib/api-utils';
@@ -240,6 +241,42 @@ const Goals: NextPageWithLayout = () => {
     const amountNeeded = goal.targetAmount - goal.currentAmount;
     return amountNeeded / monthsRemaining;
   };
+
+  const retirementGoal = goals.find(g => g.name.toLowerCase().includes('retirement')) || null;
+
+  const calculateYearsUntilRetirement = () => {
+    if (retirementGoal?.targetDate) {
+      const today = new Date();
+      const retirementDate = new Date(retirementGoal.targetDate);
+      return Math.max(0, Math.round((retirementDate.getTime() - today.getTime()) / (365.25 * 24 * 60 * 60 * 1000)));
+    }
+    return 25;
+  };
+
+  const calculateCurrentRetirementSavings = () => {
+    return assets
+      .filter(a => a.type === 'Investment' || a.type === 'Cash')
+      .reduce((sum, a) => sum + a.balance, 0);
+  };
+
+  const calculateProjectedRetirementBalance = (years: number) => {
+    return assets
+      .filter(a => a.type === 'Investment' || a.type === 'Cash')
+      .reduce(
+        (sum, a) =>
+          sum +
+          projectAssetValue(
+            {
+              balance: a.balance,
+              growthRate: a.growthRate,
+              interestRate: a.interestRate,
+              annualContribution: a.annualContribution,
+            },
+            years,
+          ),
+        0,
+      );
+  };
   
   const getPriorityLabel = (priority: number) => {
     switch (priority) {
@@ -318,7 +355,20 @@ const Goals: NextPageWithLayout = () => {
           </div>
         </div>
       )}
-      
+
+      {retirementGoal && (
+        <div className="mb-6">
+          <ProgressChart
+            currentSavings={calculateCurrentRetirementSavings()}
+            targetSavings={retirementGoal.targetAmount}
+            projectedAtRetirement={calculateProjectedRetirementBalance(
+              calculateYearsUntilRetirement(),
+            )}
+            goalName="Retirement"
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-10">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
