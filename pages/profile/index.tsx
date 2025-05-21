@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ReactElement, useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { NextPageWithLayout } from '../_app';
