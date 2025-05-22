@@ -83,8 +83,12 @@ export default function ChatInterface() {
       });
 
       let aiText = "Sorry, I couldn't get a response. Please try again.";
-      if (response.success && response.data && response.data.message.trim()) {
-        aiText = response.data.message;
+      if (response.success && response.data) {
+        if (response.data.message.trim()) {
+          aiText = response.data.message;
+        } else {
+          aiText = "The AI didn't provide a response for that query.";
+        }
       } else if (response.error) {
         aiText = response.error;
       }
