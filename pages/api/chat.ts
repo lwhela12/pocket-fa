@@ -142,7 +142,11 @@ Response:
         ]
     });
 
+    console.log('Gemini prompt:', prompt);
+    console.log('Prompt length:', prompt.length);
+
     const result = await chat.sendMessage(prompt); // Send the full context as the first message in a new chat
+    console.log('Gemini result:', JSON.stringify(result, null, 2));
     const aiResponseText = result.response.text();
     const finalMessage = aiResponseText && aiResponseText.trim()
       ? aiResponseText
@@ -157,6 +161,10 @@ Response:
 
   } catch (error: any) {
     console.error('Gemini API or Chat error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+
     let errorMessage = 'Failed to process chat message with AI.';
     if (error.message) {
         errorMessage += ` Details: ${error.message}`;
