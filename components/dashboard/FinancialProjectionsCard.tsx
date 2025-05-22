@@ -119,7 +119,11 @@ export default function FinancialProjectionsCard({
               </div>
               
               {/* Line chart */}
-              <svg className="absolute inset-0 h-full w-full overflow-visible" preserveAspectRatio="none">
+              <svg
+                className="absolute inset-0 h-full w-full overflow-visible"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+              >
                 <defs>
                   <linearGradient id="projectionGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="rgba(33, 150, 243, 0.5)" />
