@@ -47,16 +47,13 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
   console.log(`File size: ${fileData.length} bytes`);
 
   if (fileData.length > 20 * 1024 * 1024) {
-    console.log('File is larger than 20MB, attempting to upload via genAI.files.upload...');
-    const uploadedFile = await genAI.files.upload({ 
-      file: fileData, 
-      config: { mimeType: 'application/pdf' } 
-    });
-    if (!uploadedFile.uri) {
-      console.error('File upload via genAI.files.upload did not return a URI.', uploadedFile);
-      throw new Error('Failed to upload large PDF to Gemini.');
-    }
-    pdfPart = { fileData: { fileUri: uploadedFile.uri, mimeType: 'application/pdf' } };
+    console.log('File is larger than 20MB, this may exceed Gemini API limits.');
+    // The Gemini API doesn't support uploading large files separately
+    // We'll still try with inlineData, but it might fail if too large
+    pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
+    
+    // Alternatively, you could implement chunking or file compression here
+    // or use a different approach for very large files
   } else {
     console.log('File is smaller than 20MB, using inlineData.');
     pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
