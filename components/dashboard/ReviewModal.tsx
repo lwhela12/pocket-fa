@@ -40,8 +40,17 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
       method: 'POST',
       body: JSON.stringify({ record })
     });
-    const text = res.success && res.data ? res.data : res.error || 'Error';
-    setMessages([{ id: Date.now().toString(), sender: 'ai', text }]);
+    let newAiText = 'Error processing your request.';
+    if (res.success) {
+      if (res.data && res.data.trim() !== '') {
+        newAiText = res.data;
+      } else {
+        newAiText = "[The AI didn't provide a specific observation for that.]";
+      }
+    } else if (res.error) {
+      newAiText = res.error;
+    }
+    setMessages([{ id: Date.now().toString(), sender: 'ai', text: newAiText }]);
     setLoading(false);
   };
 
@@ -57,8 +66,17 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
       method: 'POST',
       body: JSON.stringify({ record, message: current })
     });
-    const text = res.success && res.data ? res.data : res.error || 'Error';
-    setMessages(prev => [...prev, { id: (Date.now()+1).toString(), sender: 'ai', text }]);
+    let newAiText = 'Error processing your request.';
+    if (res.success) {
+      if (res.data && res.data.trim() !== '') {
+        newAiText = res.data;
+      } else {
+        newAiText = "[The AI didn't provide a specific observation for that.]";
+      }
+    } else if (res.error) {
+      newAiText = res.error;
+    }
+    setMessages(prev => [...prev, { id: (Date.now()+1).toString(), sender: 'ai', text: newAiText }]);
     setLoading(false);
   };
 
