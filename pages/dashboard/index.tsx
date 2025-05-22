@@ -153,6 +153,7 @@ const Dashboard: NextPageWithLayout = () => {
   // Prepare financial projections data including annual contributions
   const prepareFinancialProjections = () => {
     const netWorth = calculateNetWorth();
+    console.log('prepareFinancialProjections using netWorth:', netWorth);
     const growthRate = 7 / 100;
     const annualContribution = assets.reduce(
       (sum, a) => sum + (a.annualContribution ?? 0),
@@ -166,6 +167,10 @@ const Dashboard: NextPageWithLayout = () => {
       projections.push({ year, value: projectedValue });
       projectedValue = projectedValue * (1 + growthRate) + annualContribution;
     }
+    console.log(
+      'prepareFinancialProjections generated values (first 3):',
+      JSON.stringify(projections.slice(0, 3), null, 2)
+    );
 
     return projections;
   };
