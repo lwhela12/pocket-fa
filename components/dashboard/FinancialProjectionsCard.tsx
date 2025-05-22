@@ -14,6 +14,7 @@ export default function FinancialProjectionsCard({
   projections,
   yearsUntilRetirement
 }: FinancialProjectionsCardProps) {
+  console.log('FinancialProjectionsCard received projections:', JSON.stringify(projections, null, 2));
   if (!projections || projections.length === 0) {
     return (
       <div className="card h-full flex items-center justify-center p-4">
@@ -23,30 +24,30 @@ export default function FinancialProjectionsCard({
   }
 
   const values = projections.map(p => p.value);
-  const dataMin = Math.min(...values);
-  const dataMax = Math.max(...values);
+  const dataMinActual = Math.min(...values);
+  const dataMaxActual = Math.max(...values);
+  console.log('FinancialProjectionsCard calculated maxValue:', dataMaxActual);
+  console.log('FinancialProjectionsCard projections[0].value:', projections[0]?.value);
 
-  let displayMin = dataMin;
-  let displayMax = dataMax;
+  let displayMin = 0;
+  let displayMax = Math.max(dataMaxActual, 0);
 
-  if (dataMin >= 0 && dataMax >= 0) {
-    displayMin = 0;
-    displayMax = dataMax;
-  } else if (dataMin <= 0 && dataMax <= 0) {
-    displayMax = 0;
-    displayMin = dataMin;
-  }
-
-  if (displayMin === displayMax) {
-    displayMax = displayMin + 1;
+  if (displayMin === displayMax && displayMin === 0) {
+    displayMax = 1;
+  } else if (displayMin === displayMax) {
+    displayMin = Math.min(0, displayMin - Math.abs(displayMin * 0.1));
+    displayMax = Math.max(0, displayMax + Math.abs(displayMax * 0.1));
+    if (displayMin === displayMax) displayMax = displayMin + 1;
   }
 
   const displayRange = displayMax - displayMin;
 
   const getYPercentage = (value: number) => {
-    if (displayRange === 0) return 50;
-    const normalized = (value - displayMin) / displayRange;
-    return (1 - normalized) * 100;
+    if (displayRange === 0) {
+      return displayMin === 0 ? 100 : 50;
+    }
+    const normalizedValue = (value - displayMin) / displayRange;
+    return (1 - Math.max(0, Math.min(1, normalizedValue))) * 100;
   };
 
   const getXPercentage = (index: number, total: number) => {
