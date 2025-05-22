@@ -150,14 +150,24 @@ const Dashboard: NextPageWithLayout = () => {
     }));
   };
 
-  // Prepare financial projections data using a fixed 7% growth rate
+  // Prepare financial projections data including annual contributions
   const prepareFinancialProjections = () => {
     const netWorth = calculateNetWorth();
     const growthRate = 7 / 100;
-    return Array.from({ length: 31 }, (_, i) => ({
-      year: i,
-      value: netWorth * Math.pow(1 + growthRate, i),
-    }));
+    const annualContribution = assets.reduce(
+      (sum, a) => sum + (a.annualContribution ?? 0),
+      0
+    );
+
+    const projections: { year: number; value: number }[] = [];
+    let projectedValue = netWorth;
+
+    for (let year = 0; year <= 30; year++) {
+      projections.push({ year, value: projectedValue });
+      projectedValue = projectedValue * (1 + growthRate) + annualContribution;
+    }
+
+    return projections;
   };
 
   const calculateCurrentSavings = () => {
