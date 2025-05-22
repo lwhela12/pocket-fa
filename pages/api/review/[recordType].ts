@@ -26,6 +26,7 @@ export default createApiHandler<string>(async (
 
   const userId = await authenticate(req);
   const { recordType } = req.query;
+  console.log('Review request for recordType:', recordType);
   if (recordType !== 'asset' && recordType !== 'debt') {
     return res.status(400).json({ success: false, error: 'Invalid record type' });
   }
@@ -34,24 +35,30 @@ export default createApiHandler<string>(async (
   if (!record) {
     return res.status(400).json({ success: false, error: 'Record data is required' });
   }
+  console.log('Record JSON:', JSON.stringify(record));
+  console.log('User message:', message);
 
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
   let pdfPart;
   if (record.statementPath) {
+    console.log('Statement path found:', record.statementPath);
     const abs = path.join(process.cwd(), 'public', record.statementPath);
+    console.log('Reading statement from:', abs);
     try {
       const data = await fs.promises.readFile(abs);
       pdfPart = {
         inlineData: { data: data.toString('base64'), mimeType: 'application/pdf' },
       };
+      console.log('pdfPart created successfully');
     } catch (err) {
-      console.warn('Statement file not found:', abs, err);
+      console.error('Failed to read statement file:', abs, err);
     }
   }
 
   const prompt = `You are PocketFA helping a user review a ${recordType}. Here is the JSON data:\n${JSON.stringify(record)}\n${message ? 'User question: '+message : 'Provide a brief analysis and recommendations.'}`;
+  console.log('Prompt:', prompt);
 
   const result = await model.generateContent({
     contents: [
@@ -68,6 +75,8 @@ export default createApiHandler<string>(async (
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
     ]
   });
+  console.log('Gemini result:', JSON.stringify(result, null, 2));
+  console.log('Gemini response text:', result.response.text());
 
   return res.status(200).json({ success: true, data: result.response.text() });
 });
