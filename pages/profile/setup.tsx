@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
 import { fetchApi } from '../../lib/api-utils';
 
 export default function ProfileSetup() {
@@ -10,6 +11,7 @@ export default function ProfileSetup() {
   const [riskTolerance, setRiskTolerance] = useState<'Conservative' | 'Moderate' | 'Aggressive'>('Moderate');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,7 @@ export default function ProfileSetup() {
         throw new Error(response.error || 'Profile setup failed');
       }
 
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Profile setup failed. Please try again.');
       setIsLoading(false);

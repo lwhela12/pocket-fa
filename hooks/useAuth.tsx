@@ -99,27 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      
-      // Fallback for development mode
-      if (process.env.NODE_ENV === 'development') {
-        const mockUser: User = {
-          id: '123',
-          email,
-          name: 'Test User',
-          age: 35,
-          retirementAge: 65,
-          riskTolerance: 'Moderate',
-        };
-        
-        setUser(mockUser);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('user', JSON.stringify(mockUser));
-          localStorage.setItem('token', 'dev-token');
-        }
-        router.push('/dashboard');
-        return;
-      }
-      
       throw error;
     } finally {
       setLoading(false);
@@ -168,23 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/auth/mfa-setup');
     } catch (error) {
       console.error('Register error:', error);
-      
-      // Fallback for development mode
-      if (process.env.NODE_ENV === 'development') {
-        const mockUser: User = {
-          id: '123',
-          email,
-        };
-        
-        setUser(mockUser);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('user', JSON.stringify(mockUser));
-          localStorage.setItem('token', 'dev-token');
-        }
-        router.push('/auth/mfa-setup');
-        return;
-      }
-      
+      // Propagate errors so invalid registrations aren't masked
       throw error;
     } finally {
       setLoading(false);

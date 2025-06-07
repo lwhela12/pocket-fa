@@ -57,7 +57,15 @@ export default createApiHandler<string>(async (
     }
   }
 
-  const prompt = `You are PocketFA helping a user review a ${recordType}. Here is the JSON data:\n${JSON.stringify(record)}\n${message ? 'User question: '+message : 'Provide a brief analysis and recommendations.'}`;
+  const prompt = `You are PocketFA helping a user review a ${recordType}. Your response must include the following sections:
+- Summary: A concise overview of the ${recordType} data.
+- Key Observations: Bullet-point insights or notable metrics.
+- Actionable Recommendations: Practical next steps or advice based on this data.
+
+Here is the ${recordType} record in JSON form:
+${JSON.stringify(record)}
+
+${message ? `User question: ${message}` : ''}`;
   console.log('Prompt:', prompt);
 
   const result = await model.generateContent({

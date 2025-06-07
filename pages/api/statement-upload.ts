@@ -59,37 +59,86 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
     pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
   }
 
-  const prompt = `You are a financial statement parser. Determine whether the uploaded PDF describes an asset or a debt and return ONLY one JSON object using the corresponding form fields.
+  const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and determine if it describes an asset (like a bank account or investment account) or a debt (like a credit card or loan).
 
-Asset example:
+You must return ONLY one JSON object using the schemas provided. Do not include markdown formatting like \`\`\`json or any text outside of the JSON object.
+
+---
+
+### Schemas
+
+**Asset Schema:**
 {
   "recordType": "asset",
   "asset": {
-    "type": "string",
-    "subtype": "string",
+    "type": "Investment" | "Cash",
+    "subtype": "401(k)" | "Roth IRA" | "Taxable" | "Checking" | "Savings" | "Other",
     "name": "string",
-    "balance": 0,
-    "interestRate": 0,
-    "annualContribution": 0,
-    "growthRate": 0,
-    "assetClass": "string"
+    "balance": 0.00,
+    "assetClass": "Stocks" | "Bonds" | "Cash Equivalents" | "Other" // (for investments only)
   }
 }
 
-Debt example:
+**Debt Schema:**
 {
   "recordType": "debt",
   "debt": {
-    "type": "string",
+    "type": "Credit Card" | "Mortgage" | "Student Loan" | "Auto Loan" | "Personal Loan" | "Other",
     "lender": "string",
-    "balance": 0,
-    "interestRate": 0,
-    "monthlyPayment": 0,
-    "termLength": 0
+    "balance": 0.00,
+    "interestRate": 0.00, // as a percentage, e.g., 21.99
+    "monthlyPayment": 0.00
   }
 }
 
-If nothing can be extracted, return { "recordType": null, "error": "Could not process the document." }. Do not include markdown or explanations.`;
+---
+
+### Examples
+
+**Example 1: Credit Card Statement**
+*Input Text Snippet from PDF:* "Chase Sapphire Preferred... New Balance: $1,234.56... Minimum Payment Due: $50.00... Purchase APR: 21.99%"
+*Your JSON Output:*
+{
+  "recordType": "debt",
+  "debt": {
+    "type": "Credit Card",
+    "lender": "Chase",
+    "balance": 1234.56,
+    "interestRate": 21.99,
+    "monthlyPayment": 50.00
+  }
+}
+
+**Example 2: Investment Account Statement**
+*Input Text Snippet from PDF:* "Fidelity 401(k) Plan... Total account value: $12,500.75... Your Investments: Fidelity 500 Index Fund (FXAIX) 100%"
+*Your JSON Output:*
+{
+  "recordType": "asset",
+  "asset": {
+    "type": "Investment",
+    "subtype": "401(k)",
+    "name": "Fidelity 401(k)",
+    "balance": 12500.75,
+    "assetClass": "Stocks"
+  }
+}
+
+**Example 3: Bank Statement**
+*Input Text Snippet from PDF:* "Bank of America Advantage Plus Banking... Current Balance as of 05/31/2025: $5,678.90"
+*Your JSON Output:*
+{
+  "recordType": "asset",
+  "asset": {
+    "type": "Cash",
+    "subtype": "Checking",
+    "name": "Bank of America Checking",
+    "balance": 5678.90
+  }
+}
+
+---
+
+Now, analyze the following document and provide the corresponding JSON object. If you cannot determine the type or extract the necessary information, return { "recordType": null, "error": "Could not process the document." }.`;
   
   const result = await model.generateContent({
     contents: [

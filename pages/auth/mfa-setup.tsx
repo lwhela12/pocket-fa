@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
 
 export default function MFASetup() {
   const [step, setStep] = useState(1);
@@ -9,6 +10,7 @@ export default function MFASetup() {
   const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleMethodSelect = (selectedMethod: 'app' | 'sms') => {
     setMethod(selectedMethod);
@@ -33,7 +35,7 @@ export default function MFASetup() {
     // Simulate verification
     setTimeout(() => {
       if (verificationCode === '123456') {
-        window.location.href = '/profile/setup';
+        router.push('/profile/setup');
       } else {
         setError('Invalid verification code. Please try again.');
         setIsLoading(false);

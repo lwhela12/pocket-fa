@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchApi } from '../../lib/api-utils'; // Add this import
+import { fetchApi } from '../../lib/api-utils';
 
 type Message = {
   id: string;
@@ -71,15 +71,18 @@ export default function ChatInterface() {
       timestamp: new Date(),
     };
     
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    const historyToSend = updatedMessages.slice(1).map(msg => ({ sender: msg.sender, text: msg.text }));
+
     const currentInput = input;
     setInput('');
     setIsTyping(true);
-    
+
     try {
       const response = await fetchApi<{ message: string }>('/api/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: currentInput }),
+        body: JSON.stringify({ message: currentInput, history: historyToSend }),
       });
 
       let aiText = "Sorry, I couldn't get a response. Please try again.";
