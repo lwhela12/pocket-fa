@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ReactElement, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
@@ -11,31 +10,10 @@ import ChatInterface from '../../components/dashboard/ChatInterface';
 import { NextPageWithLayout } from '../_app';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchApi } from '../../lib/api-utils';
+import type { DashboardResponse } from '../api/dashboard/overview';
 import Modal from '../../components/layout/Modal';
 
-// Types
-type Asset = {
-  id: string;
-  type: string;
-  subtype: string | null;
-  name: string;
-  balance: number;
-  interestRate: number | null;
-  annualContribution: number | null;
-  growthRate: number | null;
-  assetClass: string | null;
-};
-
-type Debt = {
-  id: string;
-  type: string;
-  lender: string;
-  balance: number;
-  interestRate: number;
-  monthlyPayment: number;
-  termLength: number | null;
-};
-
+// Goal type for user financial goals
 type Goal = {
   id: string;
   name: string;
@@ -63,59 +41,46 @@ const assetClassColors = {
 const Dashboard: NextPageWithLayout = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
-    // Redirect to login if not authenticated and not loading
     if (!loading && !user) {
       router.push('/auth/login');
     }
   }, [user, loading, router]);
 
-  // Fetch data when component mounts
   useEffect(() => {
     if (user) {
-      fetchDashboardData();
+      fetchDashboardOverview();
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardOverview = async () => {
     try {
       setIsLoading(true);
-      
-      // Use Promise.all to fetch all data in parallel
-      const [assetsResponse, debtsResponse, goalsResponse] = await Promise.all([
-        fetchApi('/api/dashboard/assets'),
-        fetchApi('/api/dashboard/debts'),
-        fetchApi('/api/dashboard/goals')
+      const [overviewResponse, goalsResponse] = await Promise.all([
+        fetchApi<DashboardResponse>('/api/dashboard/overview'),
+        fetchApi('/api/dashboard/goals'),
       ]);
-      
-      // Process responses
-      const hasError = !assetsResponse.success || !debtsResponse.success || !goalsResponse.success;
-      
-      if (hasError) {
-        // Handle API error
-        const errorMessage = [
-          assetsResponse.success ? '' : 'Failed to fetch assets.',
-          debtsResponse.success ? '' : 'Failed to fetch debts.',
-          goalsResponse.success ? '' : 'Failed to fetch goals.'
-        ].filter(Boolean).join(' ');
-        
-        setError(errorMessage || 'Failed to fetch dashboard data');
+
+      if (!overviewResponse.success) {
+        setError(overviewResponse.error || 'Failed to load dashboard data');
       } else {
-        // Set data from successful responses
-        setAssets(assetsResponse.data || []);
-        setDebts(debtsResponse.data || []);
-        setGoals((goalsResponse.data || []).map((goal: any) => ({
-          ...goal,
-          targetDate: goal.targetDate ? new Date(goal.targetDate) : null
-        })));
-        if ((goalsResponse.data || []).length === 0) {
+        setDashboardData(overviewResponse.data!);
+      }
+
+      if (goalsResponse.success) {
+        setGoals(
+          goalsResponse.data.map((goal: any) => ({
+            ...goal,
+            targetDate: goal.targetDate ? new Date(goal.targetDate) : null,
+          }))
+        );
+        if (goalsResponse.data.length === 0) {
           setShowWizard(true);
         }
       }
@@ -124,101 +89,6 @@ const Dashboard: NextPageWithLayout = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Calculate net worth
-  const calculateNetWorth = () => {
-    const totalAssets = assets.reduce((sum, asset) => sum + asset.balance, 0);
-    const totalDebts = debts.reduce((sum, debt) => sum + debt.balance, 0);
-    return totalAssets - totalDebts;
-  };
-
-  // Prepare asset allocation data for the chart
-  const prepareAssetAllocationData = () => {
-    // Group assets by asset class
-    const assetsByClass = assets.reduce<Record<string, number>>((acc, asset) => {
-      const assetClass = asset.assetClass || (asset.type === 'Cash' ? 'Cash' : 'Other');
-      acc[assetClass] = (acc[assetClass] || 0) + asset.balance;
-      return acc;
-    }, {});
-    
-    // Convert to array format needed for the chart
-    return Object.entries(assetsByClass).map(([label, value]) => ({
-      label,
-      value,
-      color: assetClassColors[label as keyof typeof assetClassColors] || assetClassColors.Unknown
-    }));
-  };
-
-  // Prepare financial projections data including annual contributions
-  const prepareFinancialProjections = () => {
-    const netWorth = calculateNetWorth();
-    console.log('prepareFinancialProjections using netWorth:', netWorth);
-    const growthRate = 7 / 100;
-    const annualContribution = assets.reduce(
-      (sum, a) => sum + (a.annualContribution ?? 0),
-      0
-    );
-
-    const projections: { year: number; value: number }[] = [];
-    let projectedValue = netWorth;
-
-    for (let year = 0; year <= 30; year++) {
-      projections.push({ year, value: projectedValue });
-      projectedValue = projectedValue * (1 + growthRate) + annualContribution;
-    }
-    console.log(
-      'prepareFinancialProjections generated values (first 3):',
-      JSON.stringify(projections.slice(0, 3), null, 2)
-    );
-
-    return projections;
-  };
-
-  const calculateCurrentSavings = () => {
-    return assets
-      .filter(a => a.type === 'Investment' || a.type === 'Cash')
-      .reduce((sum, a) => sum + a.balance, 0);
-  };
-
-  const calculateProjectedRetirementBalance = (years: number) => {
-    return assets
-      .filter(a => a.type === 'Investment' || a.type === 'Cash')
-      .reduce((sum, a) => {
-        const rate = (a.growthRate ?? 7) / 100;
-        let future = a.balance * Math.pow(1 + rate, years);
-        if (a.annualContribution) {
-          for (let i = 0; i < years; i++) {
-            future += a.annualContribution * Math.pow(1 + rate, years - i - 1);
-          }
-        }
-        return sum + future;
-      }, 0);
-  };
-
-  // Calculate years until retirement
-  const calculateYearsUntilRetirement = () => {
-    // Look for retirement goal or default to 25 years
-    const retirementGoal = goals.find(goal => 
-      goal.name.toLowerCase().includes('retirement') && goal.isActive
-    );
-    
-    if (retirementGoal && retirementGoal.targetDate) {
-      const today = new Date();
-      const retirementDate = new Date(retirementGoal.targetDate);
-      return Math.max(0, Math.round((retirementDate.getTime() - today.getTime()) / (365.25 * 24 * 60 * 60 * 1000)));
-    }
-    
-    return 25; // Default assumption
-  };
-
-  // Find the highest priority active goal
-  const getHighestPriorityGoal = () => {
-    const activeGoals = goals.filter(goal => goal.isActive);
-    if (activeGoals.length === 0) return null;
-    
-    // Sort by priority (lower number = higher priority)
-    return activeGoals.sort((a, b) => a.priority - b.priority)[0];
   };
 
   // Show loading spinner while checking authentication
@@ -232,6 +102,14 @@ const Dashboard: NextPageWithLayout = () => {
       </div>
     );
   }
+
+  const getHighestPriorityGoal = () => {
+    const activeGoals = goals.filter(goal => goal.isActive);
+    if (activeGoals.length === 0) {
+      return null;
+    }
+    return activeGoals.sort((a, b) => a.priority - b.priority)[0];
+  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -249,14 +127,17 @@ const Dashboard: NextPageWithLayout = () => {
   };
 
   // Get dashboard data
-  const netWorth = calculateNetWorth();
-  const totalAssets = assets.reduce((sum, asset) => sum + asset.balance, 0);
-  const totalDebts = debts.reduce((sum, debt) => sum + debt.balance, 0);
-  const assetAllocation = prepareAssetAllocationData();
-  const financialProjections = prepareFinancialProjections();
-  const yearsUntilRetirement = calculateYearsUntilRetirement();
-  const currentSavings = calculateCurrentSavings();
-  const projectedRetirement = calculateProjectedRetirementBalance(yearsUntilRetirement);
+  const netWorth = dashboardData?.netWorth ?? 0;
+  const totalAssets = dashboardData?.assets ?? 0;
+  const totalDebts = dashboardData?.debts ?? 0;
+  const assetCount = dashboardData?.assetCount ?? 0;
+  const debtCount = dashboardData?.debtCount ?? 0;
+  const assetAllocation = dashboardData?.assetAllocation ?? [];
+  const financialProjections = dashboardData?.financialProjections ?? [];
+  const yearsUntilRetirement = dashboardData?.yearsUntilRetirement ?? 0;
+  const currentSavings = dashboardData?.currentSavings ?? 0;
+  const projectedRetirement =
+    financialProjections.find(p => p.year === yearsUntilRetirement)?.value;
   const priorityGoal = getHighestPriorityGoal();
 
   return (
@@ -338,7 +219,7 @@ const Dashboard: NextPageWithLayout = () => {
             
             <motion.div variants={item} className="rounded-lg bg-white p-6 shadow">
               <h3 className="mb-4 text-lg font-medium text-gray-700">Recent Activity</h3>
-              {assets.length === 0 && debts.length === 0 && goals.length === 0 ? (
+              {assetCount === 0 && debtCount === 0 && goals.length === 0 ? (
                 <div className="text-center py-4 text-gray-500">
                   <p>Add assets, debts, or goals to see your financial activity</p>
                   <div className="flex justify-center mt-4 space-x-4">
@@ -364,11 +245,11 @@ const Dashboard: NextPageWithLayout = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {assets.length > 0 && (
+                  {assetCount > 0 && (
                     <div className="flex justify-between border-b border-gray-100 pb-3">
                       <div>
                         <p className="font-medium text-gray-900">Total Assets</p>
-                        <p className="text-sm text-gray-500">{assets.length} assets tracked</p>
+                        <p className="text-sm text-gray-500">{assetCount} assets tracked</p>
                       </div>
                       <p className="font-medium text-green-600">
                         {new Intl.NumberFormat('en-US', {
@@ -379,11 +260,11 @@ const Dashboard: NextPageWithLayout = () => {
                     </div>
                   )}
                   
-                  {debts.length > 0 && (
+                  {debtCount > 0 && (
                     <div className="flex justify-between border-b border-gray-100 pb-3">
                       <div>
                         <p className="font-medium text-gray-900">Total Debts</p>
-                        <p className="text-sm text-gray-500">{debts.length} debts tracked</p>
+                        <p className="text-sm text-gray-500">{debtCount} debts tracked</p>
                       </div>
                       <p className="font-medium text-red-600">
                         {new Intl.NumberFormat('en-US', {

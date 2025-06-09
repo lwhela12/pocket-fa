@@ -15,8 +15,14 @@ type ProjectionPoint = {
 
 type DashboardResponse = {
   netWorth: number;
+  /** Total assets value */
   assets: number;
+  /** Total debts value */
   debts: number;
+  /** Number of asset records */
+  assetCount: number;
+  /** Number of debt records */
+  debtCount: number;
   assetAllocation: AssetAllocation[];
   financialProjections: ProjectionPoint[];
   yearsUntilRetirement: number;
@@ -84,15 +90,6 @@ export default createApiHandler<DashboardResponse>(async (
       },
     ].filter(allocation => allocation.value > 0);
 
-    // If we have no real data, add placeholder data
-    if (assetAllocation.length === 0) {
-      assetAllocation.push(
-        { label: 'Cash', value: 50000, color: '#4CAF50' },
-        { label: 'Stocks', value: 100000, color: '#2196F3' },
-        { label: 'Bonds', value: 50000, color: '#FFC107' },
-        { label: 'Real Estate', value: 50000, color: '#9C27B0' }
-      );
-    }
 
     // Calculate years until retirement
     const age = profile?.age || 35;
@@ -119,10 +116,9 @@ export default createApiHandler<DashboardResponse>(async (
       projectedValue = (projectedValue * growthRateFactor) + annualContribution;
     }
 
-    // Calculate target savings
-    // For a simple calculation, we'll assume 25x annual expenses
-    // In a real app, this would be more sophisticated
-    const targetSavings = 1000000; // Placeholder value
+    // Calculate target savings (e.g., 25x annual expenses)
+    // TODO: Replace placeholder logic with real expense-based calculation
+    const targetSavings = 1000000;
 
     return res.status(200).json({
       success: true,
@@ -130,6 +126,8 @@ export default createApiHandler<DashboardResponse>(async (
         netWorth,
         assets: totalAssets,
         debts: totalDebts,
+        assetCount: assets.length,
+        debtCount: debts.length,
         assetAllocation,
         financialProjections,
         yearsUntilRetirement,

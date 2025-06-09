@@ -386,7 +386,9 @@ const Goals: NextPageWithLayout = () => {
             <>
               {goals
                 .filter(
-                  (g, idx, arr) => arr.findIndex(o => o.id === g.id) === idx,
+                  (g, idx, arr) =>
+                    arr.findIndex(o => o.id === g.id) === idx &&
+                    g.id !== retirementGoal?.id,
                 )
                 .map(goal => {
                 const progress = calculateProgress(goal.currentAmount, goal.targetAmount);

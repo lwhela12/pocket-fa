@@ -30,7 +30,10 @@ export function verifyToken(token: string): { id: string } {
       return { id: '123' };
     }
     
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('Missing JWT_SECRET environment variable');
+    }
     const decoded = verify(token, secret);
     return decoded as { id: string };
   } catch (error) {

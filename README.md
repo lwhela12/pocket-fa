@@ -38,10 +38,10 @@ Pocket Financial Advisor is a web application that provides personalized financi
    ```
 
 3. Create a `.env` file in the root directory with the following variables:
-   ```
-   DATABASE_URL="postgresql://username:password@localhost:5432/pocket_fa?schema=public"
-   JWT_SECRET="your-super-secret-jwt-token"
-   GEMINI_API_KEY="your-gemini-api-key"
+   ```dotenv
+   DATABASE_URL="postgresql://<db_user>:<db_password>@localhost:5432/pocket_fa?schema=public"
+   JWT_SECRET="development-jwt-secret-key-change-in-production"
+   GEMINI_API_KEY="<your-gemini-api-key>"
    ```
 
 4. Set up the database:
