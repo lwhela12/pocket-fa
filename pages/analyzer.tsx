@@ -4,6 +4,7 @@ import Modal from '../components/layout/Modal';
 import AssetForm from '../components/dashboard/AssetForm';
 import DebtForm from '../components/dashboard/DebtForm';
 import StatementUploadModal from '../components/dashboard/StatementUploadModal';
+import ChatInterface, { Message } from '../components/dashboard/ChatInterface';
 import ReviewButton from '../components/dashboard/ReviewButton';
 import { NextPageWithLayout } from './_app';
 import { fetchApi } from '../lib/api-utils';
@@ -47,6 +48,8 @@ const Analyzer: NextPageWithLayout = () => {
   const [formType, setFormType] = useState<'asset' | 'debt' | null>(null);
   const [editing, setEditing] = useState<any>(null);
   const [queue, setQueue] = useState<ParsedRecord[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Message[] | undefined>(undefined);
 
   useEffect(() => {
     fetchRecords();
@@ -93,6 +96,24 @@ const Analyzer: NextPageWithLayout = () => {
     if (Array.isArray(data)) {
       setQueue(data);
       openNextFromQueue();
+      const first = data[0];
+      const name =
+        first?.recordType === 'asset'
+          ? first.asset?.statementName || first.asset?.name
+          : first?.recordType === 'debt'
+          ? first.debt?.statementName || first.debt?.lender
+          : undefined;
+      if (name) {
+        const base = name.split('.')[0];
+        const msg: Message = {
+          id: Date.now().toString(),
+          sender: 'ai',
+          text: `Thanks for uploading your "${base}" statement. Here are some of my observations ...`,
+          timestamp: new Date(),
+        };
+        setChatMessages([msg]);
+        setChatOpen(true);
+      }
     }
   };
 
@@ -156,6 +177,7 @@ const Analyzer: NextPageWithLayout = () => {
           <DebtForm onSubmit={handleAddRecord} onCancel={() => setFormOpen(false)} initialValues={editing} isSubmitting={false} />
         )}
       </Modal>
+      <ChatInterface open={chatOpen} initialMessages={chatMessages} />
     </>
   );
 };
