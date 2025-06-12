@@ -37,7 +37,7 @@ interface ParsedStatement {
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 const API_KEY = process.env.GEMINI_API_KEY;
 
-async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
+async function analyzeWithGemini(filePath: string): Promise<ParsedStatement[]> {
   if (!API_KEY) throw new Error('Gemini API key not configured');
   const genAI = new GoogleGenerativeAI(API_KEY); // Corrected GoogleGenerativeAI constructor
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
@@ -59,9 +59,9 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement> {
     pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
   }
 
-  const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and determine if it describes an asset (like a bank account or investment account) or a debt (like a credit card or loan).
+  const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and extract every account it contains. Each account should be returned as a separate JSON object.
 
-You must return ONLY one JSON object using the schemas provided. Do not include markdown formatting like \`\`\`json or any text outside of the JSON object.
+You must return ONLY a JSON array of these objects using the schemas provided. Do not include markdown formatting like \`\`\`json or any extra text.
 
 ---
 
@@ -136,9 +136,23 @@ You must return ONLY one JSON object using the schemas provided. Do not include 
   }
 }
 
+**Example 4: Statement With Multiple Accounts**
+*Input Text Snippet from PDF:* "Account 1 - Checking Balance $500.00\nAccount 2 - Savings Balance $1000.00"
+*Your JSON Output:*
+[
+  {
+    "recordType": "asset",
+    "asset": { "type": "Cash", "subtype": "Checking", "name": "Checking Account", "balance": 500.0 }
+  },
+  {
+    "recordType": "asset",
+    "asset": { "type": "Cash", "subtype": "Savings", "name": "Savings Account", "balance": 1000.0 }
+  }
+]
+
 ---
 
-Now, analyze the following document and provide the corresponding JSON object. If you cannot determine the type or extract the necessary information, return { "recordType": null, "error": "Could not process the document." }.`;
+Now, analyze the following document and provide the corresponding JSON array. If you cannot determine the type or extract the necessary information, return [{ "recordType": null, "error": "Could not process the document." }].`;
   
   const result = await model.generateContent({
     contents: [
@@ -176,9 +190,9 @@ Now, analyze the following document and provide the corresponding JSON object. I
   }
 }
 
-export default createApiHandler<ParsedStatement>(async (
+export default createApiHandler<ParsedStatement[]>(async (
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse<ParsedStatement>>
+  res: NextApiResponse<ApiResponse<ParsedStatement[]>>
 ) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -206,14 +220,16 @@ export default createApiHandler<ParsedStatement>(async (
   try {
     const parsed = await analyzeWithGemini(tempPath);
     await fs.promises.copyFile(tempPath, destPath);
-    if (parsed.recordType === 'asset' && parsed.asset) {
-      parsed.asset.statementPath = relativePath;
-      parsed.asset.statementName = filename;
-    }
-    if (parsed.recordType === 'debt' && parsed.debt) {
-      parsed.debt.statementPath = relativePath;
-      parsed.debt.statementName = filename;
-    }
+    parsed.forEach(record => {
+      if (record.recordType === 'asset' && record.asset) {
+        record.asset.statementPath = relativePath;
+        record.asset.statementName = filename;
+      }
+      if (record.recordType === 'debt' && record.debt) {
+        record.debt.statementPath = relativePath;
+        record.debt.statementName = filename;
+      }
+    });
     return res.status(200).json({ success: true, data: parsed });
   } catch (error: any) {
     console.error('Statement upload error:', error);

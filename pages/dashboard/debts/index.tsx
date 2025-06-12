@@ -176,15 +176,17 @@ const Debts: NextPageWithLayout = () => {
     return (totalMonthlyPayment / monthlyIncome) * 100;
   };
 
-  const handleParsedStatement = (data: ParsedStatement) => {
-    if (data.recordType === 'debt' && data.debt) {
+  const handleParsedStatement = (data: ParsedStatement[]) => {
+    const first = data[0];
+    if (!first) return;
+    if (first.recordType === 'debt' && first.debt) {
       setModalType('debt');
-      setParsedDebt(data.debt);
+      setParsedDebt(first.debt);
       setEditingDebt(null);
       setIsModalOpen(true);
-    } else if (data.recordType === 'asset' && data.asset) {
+    } else if (first.recordType === 'asset' && first.asset) {
       setModalType('asset');
-      setParsedAsset(data.asset);
+      setParsedAsset(first.asset);
       setEditingAsset(null);
       setIsModalOpen(true);
     }

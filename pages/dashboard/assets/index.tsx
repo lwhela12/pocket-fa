@@ -166,15 +166,17 @@ const Assets: NextPageWithLayout = () => {
     }).format(amount);
   };
 
-  const handleParsedStatement = (data: ParsedStatement) => {
-    if (data.recordType === 'asset' && data.asset) {
+  const handleParsedStatement = (data: ParsedStatement[]) => {
+    const first = data[0];
+    if (!first) return;
+    if (first.recordType === 'asset' && first.asset) {
       setModalType('asset');
-      setParsedAsset(data.asset);
+      setParsedAsset(first.asset);
       setEditingAsset(null);
       setIsModalOpen(true);
-    } else if (data.recordType === 'debt' && data.debt) {
+    } else if (first.recordType === 'debt' && first.debt) {
       setModalType('debt');
-      setParsedDebt(data.debt);
+      setParsedDebt(first.debt);
       setEditingDebt(null);
       setIsModalOpen(true);
     }
