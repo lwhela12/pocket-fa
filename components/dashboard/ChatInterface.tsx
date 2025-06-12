@@ -3,14 +3,14 @@ import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchApi } from '../../lib/api-utils';
 
-type Message = {
+export type Message = {
   id: string;
   sender: 'user' | 'ai';
   text: string;
   timestamp: Date;
 };
 
-const INITIAL_MESSAGES: Message[] = [
+export const INITIAL_MESSAGES: Message[] = [
   {
     id: '1',
     sender: 'ai',
@@ -25,9 +25,14 @@ const EXAMPLE_PROMPTS = [
   'What\'s my optimal savings rate?',
 ];
 
-export default function ChatInterface() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+interface ChatInterfaceProps {
+  open?: boolean;
+  initialMessages?: Message[];
+}
+
+export default function ChatInterface({ open = false, initialMessages }: ChatInterfaceProps) {
+  const [isOpen, setIsOpen] = useState(open);
+  const [messages, setMessages] = useState<Message[]>(initialMessages ?? INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -40,7 +45,17 @@ export default function ChatInterface() {
 
   // Fetch initial snapshot when chat is opened
   useEffect(() => {
-    if (isOpen) {
+    setIsOpen(open);
+  }, [open]);
+
+  useEffect(() => {
+    if (initialMessages) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages]);
+
+  useEffect(() => {
+    if (isOpen && !initialMessages) {
       (async () => {
         const response = await fetchApi<{ message: string }>('/api/chat', {
           method: 'POST',
@@ -57,7 +72,7 @@ export default function ChatInterface() {
         }
       })();
     }
-  }, [isOpen]);
+  }, [isOpen, initialMessages]);
 
   const handleSendMessage = async (e?: React.FormEvent) => { // Make this async
     if (e) e.preventDefault();
