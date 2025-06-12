@@ -11,9 +11,7 @@ jest.mock('fs', () => ({
 jest.mock('@google/generative-ai', () => {
   const mockGenerate = jest.fn().mockResolvedValue({
     response: {
-      text: () => '```json
-{"recordType":"asset","asset":{"type":"Cash","subtype":"Checking","name":"Bank","balance":100}}
-```',
+      text: () => '```json\n[{"recordType":"asset","asset":{"type":"Cash","subtype":"Checking","name":"Bank","balance":100}}]\n```',
     },
   });
   const mockModel = { generateContent: mockGenerate };
@@ -71,7 +69,9 @@ describe('statement-upload', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      data: { recordType: 'asset', asset: { type: 'Cash', subtype: 'Checking', name: 'Bank', balance: 100 } },
+      data: [
+        { recordType: 'asset', asset: { type: 'Cash', subtype: 'Checking', name: 'Bank', balance: 100 } }
+      ],
     });
   });
 });

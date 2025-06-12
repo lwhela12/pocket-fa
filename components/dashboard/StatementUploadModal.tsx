@@ -33,7 +33,7 @@ export interface ParsedStatement {
 
 interface Props {
   onClose: () => void;
-  onParsed: (data: ParsedStatement) => void;
+  onParsed: (data: ParsedStatement[]) => void;
 }
 
 const StatementUploadModal = ({ onClose, onParsed }: Props) => {
@@ -70,7 +70,7 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
     setIsUploading(true);
     try {
       const base64 = await fileToBase64(file);
-      const response = await fetchApi<ParsedStatement>('/api/statement-upload', {
+      const response = await fetchApi<ParsedStatement[]>('/api/statement-upload', {
         method: 'POST',
         body: JSON.stringify({ filename: file.name, file: base64 }),
       });

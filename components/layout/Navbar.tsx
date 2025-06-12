@@ -28,50 +28,20 @@ export default function Navbar() {
         <div className="flex h-16 justify-between">
           <div className="flex">
             <div className="flex flex-shrink-0 items-center">
-              <Link href="/dashboard" className="text-xl font-bold text-primary">
+              <Link href="/analyzer" className="text-xl font-bold text-primary">
                 Pocket FA
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
-                href="/dashboard"
+                href="/analyzer"
                 className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
-                  router.pathname === '/dashboard'
+                  router.pathname === '/analyzer'
                     ? 'border-primary text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Dashboard
-              </Link>
-              <Link
-                href="/dashboard/assets"
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
-                  router.pathname.startsWith('/dashboard/assets')
-                    ? 'border-primary text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                Assets
-              </Link>
-              <Link
-                href="/dashboard/debts"
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
-                  router.pathname.startsWith('/dashboard/debts')
-                    ? 'border-primary text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                Debts
-              </Link>
-              <Link
-                href="/dashboard/goals"
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
-                  router.pathname.startsWith('/dashboard/goals')
-                    ? 'border-primary text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                Goals
+                Statement Analyzer
               </Link>
             </div>
           </div>
@@ -163,44 +133,14 @@ export default function Navbar() {
       <div className="sm:hidden" id="mobile-menu">
         <div className="space-y-1 pt-2 pb-3">
           <Link
-            href="/dashboard"
+            href="/analyzer"
             className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
-              router.pathname === '/dashboard'
+              router.pathname === '/analyzer'
                 ? 'border-primary bg-primary-50 text-primary'
                 : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800'
             }`}
           >
-            Dashboard
-          </Link>
-          <Link
-            href="/dashboard/assets"
-            className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
-              router.pathname.startsWith('/dashboard/assets')
-                ? 'border-primary bg-primary-50 text-primary'
-                : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800'
-            }`}
-          >
-            Assets
-          </Link>
-          <Link
-            href="/dashboard/debts"
-            className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
-              router.pathname.startsWith('/dashboard/debts')
-                ? 'border-primary bg-primary-50 text-primary'
-                : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800'
-            }`}
-          >
-            Debts
-          </Link>
-          <Link
-            href="/dashboard/goals"
-            className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
-              router.pathname.startsWith('/dashboard/goals')
-                ? 'border-primary bg-primary-50 text-primary'
-                : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800'
-            }`}
-          >
-            Goals
+            Statement Analyzer
           </Link>
         </div>
         <div className="border-t border-gray-200 pt-4 pb-3">
