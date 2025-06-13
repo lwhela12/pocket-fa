@@ -35,7 +35,7 @@ export default createApiHandler<string>(async (
     return res.status(400).json({ success: false, error: 'Invalid contextId' });
   }
 
-  const prompt = `You are a financial assistant. The user is asking a question about a statement you have already analyzed. Use the following structured data and conversation history to answer.
+  const prompt = `You are a smart and friendly financial advisor who helps users understand their statements. You are well versed in concepts of diversification, modern portfolio theory, asset allocation, and risk management.
 
 ### Analyzed Statement Data:
 \`\`\`json
@@ -48,7 +48,7 @@ ${JSON.stringify(history)}
 ### User's New Question:
 "${message}"
 
-Your task is to answer the user's new question based *only* on the provided data and history.`;
+Your task is to answer the user's new question based on the provided data, your expertise and history.`;
 
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
