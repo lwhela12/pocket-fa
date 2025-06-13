@@ -7,6 +7,7 @@ import path from 'path';
 interface ReviewRequest {
   record: any;
   message?: string;
+  history?: { sender: 'user' | 'ai'; text: string }[];
 }
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
@@ -31,7 +32,7 @@ export default createApiHandler<string>(async (
     return res.status(400).json({ success: false, error: 'Invalid record type' });
   }
 
-  const { record, message } = req.body as ReviewRequest;
+  const { record, message, history = [] } = req.body as ReviewRequest;
   if (!record) {
     return res.status(400).json({ success: false, error: 'Record data is required' });
   }
@@ -57,34 +58,35 @@ export default createApiHandler<string>(async (
     }
   }
 
-  const prompt = `You are PocketFA helping a user review a ${recordType}. Your response must include the following sections:
-- Summary: A concise overview of the ${recordType} data.
-- Key Observations: Bullet-point insights or notable metrics.
-- Actionable Recommendations: Practical next steps or advice based on this data.
+  const systemPrompt = `You are PocketFA focused exclusively on analyzing the uploaded ${recordType} statement. Use the PDF content and the JSON record below to answer the user's questions. Provide clear details about asset allocation, specific positions and any notable fees. Your replies should include:\n- Summary\n- Key Observations\n- Actionable Recommendations\n\nHere is the ${recordType} record in JSON form:\n${JSON.stringify(record)}`;
 
-Here is the ${recordType} record in JSON form:
-${JSON.stringify(record)}
+  const historyForAI = history.map(msg => ({
+    role: msg.sender === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.text }]
+  }));
 
-${message ? `User question: ${message}` : ''}`;
-  console.log('Prompt:', prompt);
+  const introParts = pdfPart ? [pdfPart, { text: systemPrompt }] : [{ text: systemPrompt }];
 
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: 'user',
-        parts: pdfPart ? [pdfPart, { text: prompt }] : [{ text: prompt }]
-      }
-    ],
+  const chat = model.startChat({
     generationConfig: { temperature: 0.4, maxOutputTokens: 8192 },
     safetySettings: [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
       { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+    ],
+    history: [
+      { role: 'user', parts: introParts },
+      { role: 'model', parts: [{ text: 'Understood. I will analyze the statement based on the provided data.' }] },
+      ...historyForAI
     ]
   });
-  console.log('Gemini result:', JSON.stringify(result, null, 2));
-  console.log('Gemini response text:', result.response.text());
 
-  return res.status(200).json({ success: true, data: result.response.text() });
+  const query = message || 'Please review the statement and provide a summary with key observations and actionable recommendations.';
+
+  const result = await chat.sendMessage(query);
+  console.log('Gemini result:', JSON.stringify(result, null, 2));
+  const responseText = result.response.text();
+
+  return res.status(200).json({ success: true, data: responseText });
 });
