@@ -50,6 +50,7 @@ const Analyzer: NextPageWithLayout = () => {
   const [queue, setQueue] = useState<ParsedRecord[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Message[] | undefined>(undefined);
+  const [activeStatementContext, setActiveStatementContext] = useState<{ record: any; pdfBase64: string } | null>(null);
 
   useEffect(() => {
     fetchRecords();
@@ -92,26 +93,41 @@ const Analyzer: NextPageWithLayout = () => {
     }
   };
 
-  const handleParsed = (data: ParsedRecord[]) => {
-    if (Array.isArray(data)) {
-      setQueue(data);
-      openNextFromQueue();
-      const first = data[0];
-      const name =
-        first?.recordType === 'asset'
-          ? first.asset?.statementName || first.asset?.name
-          : first?.recordType === 'debt'
-          ? first.debt?.statementName || first.debt?.lender
-          : undefined;
-      if (name) {
-        const base = name.split('.')[0];
-        const msg: Message = {
+  const handleParsed = async (data: ParsedRecord[]) => {
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    setQueue(data);
+    openNextFromQueue();
+
+    const first = data[0];
+    const recordData: any = first.asset || first.debt;
+    if (recordData) {
+      setRecords(prev => [{ recordType: first.recordType, data: recordData }, ...prev]);
+    }
+
+    const pdfBase64 = recordData?.pdfBase64;
+    const recordType = first.recordType;
+
+    if (recordType && recordData && pdfBase64) {
+      setActiveStatementContext({ record: recordData, pdfBase64 });
+
+      const res = await fetchApi<string>(`/api/review/${recordType}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          record: recordData,
+          pdfBase64,
+          message: 'Please provide a summary, key observations, and actionable recommendations for this statement.'
+        })
+      });
+
+      if (res.success && res.data) {
+        const initialAiMessage: Message = {
           id: Date.now().toString(),
           sender: 'ai',
-          text: `Thanks for uploading your "${base}" statement. Here are some of my observations ...`,
-          timestamp: new Date(),
+          text: res.data,
+          timestamp: new Date()
         };
-        setChatMessages([msg]);
+        setChatMessages([initialAiMessage]);
         setChatOpen(true);
       }
     }
@@ -129,6 +145,34 @@ const Analyzer: NextPageWithLayout = () => {
     } else {
       setError(res.error || 'Failed to save record');
     }
+  };
+
+  const handleSendMessage = async (message: string, history: Message[]): Promise<string> => {
+    if (activeStatementContext) {
+      const { record, pdfBase64 } = activeStatementContext;
+      const recordType = record.lender ? 'debt' : 'asset';
+
+      const res = await fetchApi<string>(`/api/review/${recordType}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          record,
+          message,
+          history: history.map(m => ({ sender: m.sender, text: m.text })),
+          pdfBase64,
+        }),
+      });
+
+      return res.success ? res.data ?? '' : res.error ?? 'Error getting response.';
+    }
+
+    const res = await fetchApi<{ message: string }>('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message,
+        history: history.map(m => ({ sender: m.sender, text: m.text })),
+      }),
+    });
+    return res.success ? res.data?.message ?? '' : res.error ?? 'Error getting response.';
   };
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
@@ -177,7 +221,7 @@ const Analyzer: NextPageWithLayout = () => {
           <DebtForm onSubmit={handleAddRecord} onCancel={() => setFormOpen(false)} initialValues={editing} isSubmitting={false} />
         )}
       </Modal>
-      <ChatInterface open={chatOpen} initialMessages={chatMessages} />
+      <ChatInterface open={chatOpen} initialMessages={chatMessages} onSendMessage={handleSendMessage} />
     </>
   );
 };

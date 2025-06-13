@@ -6,7 +6,7 @@ import NetWorthCard from '../../components/dashboard/NetWorthCard';
 import AssetAllocationCard from '../../components/dashboard/AssetAllocationCard';
 import FinancialProjectionsCard from '../../components/dashboard/FinancialProjectionsCard';
 import ProgressChart from '../../components/dashboard/ProgressChart';
-import ChatInterface from '../../components/dashboard/ChatInterface';
+import ChatInterface, { Message } from '../../components/dashboard/ChatInterface';
 import { NextPageWithLayout } from '../_app';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchApi } from '../../lib/api-utils';
@@ -124,6 +124,17 @@ const Dashboard: NextPageWithLayout = () => {
   const item = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
+  };
+
+  const handleSendMessage = async (message: string, history: Message[]): Promise<string> => {
+    const res = await fetchApi<{ message: string }>('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message,
+        history: history.map(m => ({ sender: m.sender, text: m.text }))
+      })
+    });
+    return res.success ? res.data?.message ?? '' : res.error ?? 'Error getting response.';
   };
 
   // Get dashboard data
@@ -294,7 +305,7 @@ const Dashboard: NextPageWithLayout = () => {
             </motion.div>
           </motion.div>
           
-        <ChatInterface />
+        <ChatInterface onSendMessage={handleSendMessage} />
       </>
     )}
 

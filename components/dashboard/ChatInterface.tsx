@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchApi } from '../../lib/api-utils';
+// All API interactions are handled by the parent component via the onSendMessage prop
 
 export type Message = {
   id: string;
@@ -28,9 +28,13 @@ const EXAMPLE_PROMPTS = [
 interface ChatInterfaceProps {
   open?: boolean;
   initialMessages?: Message[];
+  /**
+   * Called when the user sends a message. Should return the AI response text.
+   */
+  onSendMessage: (message: string, history: Message[]) => Promise<string>;
 }
 
-export default function ChatInterface({ open = false, initialMessages }: ChatInterfaceProps) {
+export default function ChatInterface({ open = false, initialMessages, onSendMessage }: ChatInterfaceProps) {
   const [isOpen, setIsOpen] = useState(open);
   const [messages, setMessages] = useState<Message[]>(initialMessages ?? INITIAL_MESSAGES);
   const [input, setInput] = useState('');
@@ -54,25 +58,6 @@ export default function ChatInterface({ open = false, initialMessages }: ChatInt
     }
   }, [initialMessages]);
 
-  useEffect(() => {
-    if (isOpen && !initialMessages) {
-      (async () => {
-        const response = await fetchApi<{ message: string }>('/api/chat', {
-          method: 'POST',
-          body: JSON.stringify({ message: '__init__' }),
-        });
-        if (response.success && response.data) {
-          const aiMessage: Message = {
-            id: Date.now().toString(),
-            sender: 'ai',
-            text: response.data.message,
-            timestamp: new Date(),
-          };
-          setMessages([INITIAL_MESSAGES[0], aiMessage]);
-        }
-      })();
-    }
-  }, [isOpen, initialMessages]);
 
   const handleSendMessage = async (e?: React.FormEvent) => { // Make this async
     if (e) e.preventDefault();
@@ -95,29 +80,18 @@ export default function ChatInterface({ open = false, initialMessages }: ChatInt
     setIsTyping(true);
 
     try {
-      const response = await fetchApi<{ message: string }>('/api/chat', {
-        method: 'POST',
-        body: JSON.stringify({ message: currentInput, history: historyToSend }),
-      });
-
-      let aiText = "Sorry, I couldn't get a response. Please try again.";
-      if (response.success && response.data) {
-        if (response.data.message.trim()) {
-          aiText = response.data.message;
-        } else {
-          aiText = "The AI didn't provide a response for that query.";
-        }
-      } else if (response.error) {
-        aiText = response.error;
-      }
+      const aiText = await onSendMessage(currentInput, updatedMessages);
+      const textForAi = aiText && aiText.trim() !== ''
+        ? aiText
+        : "I'm sorry, I couldn't get a response.";
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
-        text: aiText,
+        text: textForAi,
         timestamp: new Date(),
       };
-      
+
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("Failed to send message:", error);
