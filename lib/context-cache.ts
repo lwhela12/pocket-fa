@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 
-const cache = new Map<string, any>();
+const globalForCache = globalThis as { contextCache?: Map<string, any> };
+const cache = (globalForCache.contextCache ||= new Map<string, any>());
 
 export function storeContext(data: any): string {
   const id = randomUUID();
