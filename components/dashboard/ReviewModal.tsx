@@ -38,7 +38,7 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
     setLoading(true);
     const res = await fetchApi<string>(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ record, history: [] })
+      body: JSON.stringify({ record, history: [], pdfBase64: (record as any).pdfBase64 })
     });
     let newAiText = 'Error processing your request.';
     if (res.success) {
@@ -65,7 +65,7 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
     setLoading(true);
     const res = await fetchApi<string>(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ record, message: current, history: historyForServer })
+      body: JSON.stringify({ record, message: current, history: historyForServer, pdfBase64: (record as any).pdfBase64 })
     });
     let newAiText = 'Error processing your request.';
     if (res.success) {
