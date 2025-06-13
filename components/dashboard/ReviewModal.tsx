@@ -38,7 +38,7 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
     setLoading(true);
     const res = await fetchApi<string>(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ record })
+      body: JSON.stringify({ record, history: [] })
     });
     let newAiText = 'Error processing your request.';
     if (res.success) {
@@ -57,14 +57,15 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: input };
-    setMessages(prev => [...prev, userMsg]);
     const current = input;
+    const historyForServer = messages.map(m => ({ sender: m.sender, text: m.text }));
+    const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: current };
+    setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
     const res = await fetchApi<string>(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ record, message: current })
+      body: JSON.stringify({ record, message: current, history: historyForServer })
     });
     let newAiText = 'Error processing your request.';
     if (res.success) {
