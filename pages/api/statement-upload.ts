@@ -4,40 +4,36 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import fs from 'fs';
 import path from 'path';
 
-interface AssetData {
-  type: string;
-  subtype?: string;
+interface Position {
   name: string;
-  balance: number;
-  interestRate?: number;
-  annualContribution?: number;
-  growthRate?: number;
-  assetClass?: string;
-  statementPath?: string;
-  statementName?: string;
+  symbol: string;
+  shares: number | null;
+  marketValue: number;
 }
 
-interface DebtData {
-  type: string;
-  lender: string;
+interface AccountSummary {
+  accountType: string;
+  accountNumber?: string;
   balance: number;
-  interestRate: number;
-  monthlyPayment: number;
-  termLength?: number;
-  statementPath?: string;
-  statementName?: string;
+  positions: Position[];
+  activity: {
+    deposits: number;
+    withdrawals: number;
+  };
+  fees: number;
 }
 
-interface ParsedStatement {
-  recordType: 'asset' | 'debt' | null;
-  asset?: AssetData;
-  debt?: DebtData;
+export interface StatementSummary {
+  brokerageCompany: string;
+  accountCount: number;
+  accounts: AccountSummary[];
+  qualitativeSummary: string;
 }
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 const API_KEY = process.env.GEMINI_API_KEY;
 
-async function analyzeWithGemini(filePath: string): Promise<ParsedStatement[]> {
+async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
   if (!API_KEY) throw new Error('Gemini API key not configured');
   const genAI = new GoogleGenerativeAI(API_KEY); // Corrected GoogleGenerativeAI constructor
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
@@ -59,100 +55,38 @@ async function analyzeWithGemini(filePath: string): Promise<ParsedStatement[]> {
     pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
   }
 
-  const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and extract every account it contains. Each account should be returned as a separate JSON object.
+  const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and extract key information into a single, structured JSON object.
 
-You must return ONLY a JSON array of these objects using the schemas provided. Do not include markdown formatting like \`\`\`json or any extra text.
+You MUST return ONLY the JSON object and nothing else. Do not wrap it in markdown.
 
+### JSON Schema to follow:
+{
+  "brokerageCompany": "string",
+  "accountCount": "number",
+  "accounts": [
+    {
+      "accountType": "string (e.g., '401(k)', 'Roth IRA', 'Taxable')",
+      "accountNumber": "string (last 4 digits if available)",
+      "balance": "number",
+      "positions": [
+        {
+          "name": "string (e.g., 'Fidelity 500 Index Fund')",
+          "symbol": "string (e.g., 'FXAIX')",
+          "shares": "number | null",
+          "marketValue": "number"
+        }
+      ],
+      "activity": {
+        "deposits": "number",
+        "withdrawals": "number"
+      },
+      "fees": "number"
+    }
+  ],
+  "qualitativeSummary": "string (A one or two-sentence summary of other important observations, such as unpriced securities, large one-time transactions, or missing data.)"
+}
 ---
-
-### Schemas
-
-**Asset Schema:**
-{
-  "recordType": "asset",
-  "asset": {
-    "type": "Investment" | "Cash",
-    "subtype": "401(k)" | "Roth IRA" | "Taxable" | "Checking" | "Savings" | "Other",
-    "name": "string",
-    "balance": 0.00,
-    "assetClass": "Stocks" | "Bonds" | "Cash Equivalents" | "Other" // (for investments only)
-  }
-}
-
-**Debt Schema:**
-{
-  "recordType": "debt",
-  "debt": {
-    "type": "Credit Card" | "Mortgage" | "Student Loan" | "Auto Loan" | "Personal Loan" | "Other",
-    "lender": "string",
-    "balance": 0.00,
-    "interestRate": 0.00, // as a percentage, e.g., 21.99
-    "monthlyPayment": 0.00
-  }
-}
-
----
-
-### Examples
-
-**Example 1: Credit Card Statement**
-*Input Text Snippet from PDF:* "Chase Sapphire Preferred... New Balance: $1,234.56... Minimum Payment Due: $50.00... Purchase APR: 21.99%"
-*Your JSON Output:*
-{
-  "recordType": "debt",
-  "debt": {
-    "type": "Credit Card",
-    "lender": "Chase",
-    "balance": 1234.56,
-    "interestRate": 21.99,
-    "monthlyPayment": 50.00
-  }
-}
-
-**Example 2: Investment Account Statement**
-*Input Text Snippet from PDF:* "Fidelity 401(k) Plan... Total account value: $12,500.75... Your Investments: Fidelity 500 Index Fund (FXAIX) 100%"
-*Your JSON Output:*
-{
-  "recordType": "asset",
-  "asset": {
-    "type": "Investment",
-    "subtype": "401(k)",
-    "name": "Fidelity 401(k)",
-    "balance": 12500.75,
-    "assetClass": "Stocks"
-  }
-}
-
-**Example 3: Bank Statement**
-*Input Text Snippet from PDF:* "Bank of America Advantage Plus Banking... Current Balance as of 05/31/2025: $5,678.90"
-*Your JSON Output:*
-{
-  "recordType": "asset",
-  "asset": {
-    "type": "Cash",
-    "subtype": "Checking",
-    "name": "Bank of America Checking",
-    "balance": 5678.90
-  }
-}
-
-**Example 4: Statement With Multiple Accounts**
-*Input Text Snippet from PDF:* "Account 1 - Checking Balance $500.00\nAccount 2 - Savings Balance $1000.00"
-*Your JSON Output:*
-[
-  {
-    "recordType": "asset",
-    "asset": { "type": "Cash", "subtype": "Checking", "name": "Checking Account", "balance": 500.0 }
-  },
-  {
-    "recordType": "asset",
-    "asset": { "type": "Cash", "subtype": "Savings", "name": "Savings Account", "balance": 1000.0 }
-  }
-]
-
----
-
-Now, analyze the following document and provide the corresponding JSON array. If you cannot determine the type or extract the necessary information, return [{ "recordType": null, "error": "Could not process the document." }].`;
+Now, analyze the document and provide the corresponding JSON object.`;
   
   const result = await model.generateContent({
     contents: [
@@ -190,9 +124,9 @@ Now, analyze the following document and provide the corresponding JSON array. If
   }
 }
 
-export default createApiHandler<ParsedStatement[]>(async (
+export default createApiHandler<StatementSummary>(async (
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse<ParsedStatement[]>>
+  res: NextApiResponse<ApiResponse<StatementSummary>>
 ) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -215,21 +149,9 @@ export default createApiHandler<ParsedStatement[]>(async (
   await fs.promises.mkdir(publicDir, { recursive: true });
   const destName = `${userId}-${Date.now()}-${filename}`;
   const destPath = path.join(publicDir, destName);
-  const relativePath = path.join('statements', destName);
-
   try {
     const parsed = await analyzeWithGemini(tempPath);
     await fs.promises.copyFile(tempPath, destPath);
-    parsed.forEach(record => {
-      if (record.recordType === 'asset' && record.asset) {
-        record.asset.statementPath = relativePath;
-        record.asset.statementName = filename;
-      }
-      if (record.recordType === 'debt' && record.debt) {
-        record.debt.statementPath = relativePath;
-        record.debt.statementName = filename;
-      }
-    });
     return res.status(200).json({ success: true, data: parsed });
   } catch (error: any) {
     console.error('Statement upload error:', error);

@@ -1,16 +1,14 @@
 import handler from '../pages/api/review/[recordType]';
-import fs from 'fs';
+import { storeContext } from '../lib/context-cache';
 
 jest.mock('fs', () => ({
   promises: {
-    readFile: jest.fn().mockResolvedValue(Buffer.from('dummy')),
+    readFile: jest.fn(),
   },
 }));
 
-const mockSend = jest.fn().mockResolvedValue({ response: { text: () => 'ok' } });
-const mockChat = { sendMessage: mockSend };
-const mockStart = jest.fn().mockReturnValue(mockChat);
-const mockModel = { startChat: mockStart };
+const mockGenerate = jest.fn().mockResolvedValue({ response: { text: () => 'ok' } });
+const mockModel = { generateContent: mockGenerate };
 const mockGetModel = jest.fn().mockReturnValue(mockModel);
 
 jest.mock('@google/generative-ai', () => ({
@@ -20,7 +18,7 @@ jest.mock('@google/generative-ai', () => ({
 }));
 
 const createMocks = () => {
-  const req: any = { method: 'GET', query: { recordType: 'asset' }, body: {}, headers: {} };
+  const req: any = { method: 'GET', query: { recordType: 'statement' }, body: {}, headers: {} };
   const res: any = { status: jest.fn(() => res), json: jest.fn(() => res) };
   return { req, res };
 };
@@ -32,16 +30,15 @@ describe('review api', () => {
     expect(res.status).toHaveBeenCalledWith(405);
   });
 
-  it('uses pdfBase64 when provided', async () => {
+  it('uses cached context', async () => {
     process.env.GEMINI_API_KEY = 'test';
     process.env.NODE_ENV = 'development';
+    const contextId = storeContext({ foo: 'bar' });
     const { req, res } = createMocks();
     req.method = 'POST';
-    req.body = { record: { name: 'Test' }, pdfBase64: 'Zm9v', history: [] };
+    req.body = { contextId, message: 'Hi', history: [] };
     await (handler as any)(req, res);
-    expect(fs.promises.readFile).not.toHaveBeenCalled();
-    const call = mockStart.mock.calls[0][0];
-    expect(call.history[0].parts[0]).toEqual({ inlineData: { data: 'Zm9v', mimeType: 'application/pdf' } });
+    expect(mockGenerate).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
   });
 });
