@@ -8,6 +8,7 @@ interface ReviewRequest {
   record: any;
   message?: string;
   history?: { sender: 'user' | 'ai'; text: string }[];
+  pdfBase64?: string;
 }
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
@@ -32,7 +33,7 @@ export default createApiHandler<string>(async (
     return res.status(400).json({ success: false, error: 'Invalid record type' });
   }
 
-  const { record, message, history = [] } = req.body as ReviewRequest;
+  const { record, message, history = [], pdfBase64 } = req.body as ReviewRequest;
   if (!record) {
     return res.status(400).json({ success: false, error: 'Record data is required' });
   }
@@ -43,7 +44,9 @@ export default createApiHandler<string>(async (
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
   let pdfPart;
-  if (record.statementPath) {
+  if (pdfBase64) {
+    pdfPart = { inlineData: { data: pdfBase64, mimeType: 'application/pdf' } };
+  } else if (record.statementPath) {
     console.log('Statement path found:', record.statementPath);
     const abs = path.join(process.cwd(), 'public', record.statementPath);
     console.log('Reading statement from:', abs);

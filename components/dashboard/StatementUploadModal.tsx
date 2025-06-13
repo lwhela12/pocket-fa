@@ -12,6 +12,7 @@ export interface AssetData {
   assetClass?: string;
   statementPath?: string;
   statementName?: string;
+  pdfBase64?: string;
 }
 
 export interface DebtData {
@@ -23,6 +24,7 @@ export interface DebtData {
   termLength?: number;
   statementPath?: string;
   statementName?: string;
+  pdfBase64?: string;
 }
 
 export interface ParsedStatement {
@@ -75,7 +77,16 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
         body: JSON.stringify({ filename: file.name, file: base64 }),
       });
       if (response.success && response.data) {
-        onParsed(response.data);
+        const augmented = response.data.map(r => {
+          if (r.recordType === 'asset' && r.asset) {
+            return { ...r, asset: { ...r.asset, pdfBase64: base64 } };
+          }
+          if (r.recordType === 'debt' && r.debt) {
+            return { ...r, debt: { ...r.debt, pdfBase64: base64 } };
+          }
+          return r;
+        });
+        onParsed(augmented);
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');
