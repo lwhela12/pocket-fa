@@ -3,7 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import Modal from '../components/layout/Modal';
 import AssetForm from '../components/dashboard/AssetForm';
 import DebtForm from '../components/dashboard/DebtForm';
-import StatementUploadModal from '../components/dashboard/StatementUploadModal';
+import StatementUploadModal, { StatementSummary } from '../components/dashboard/StatementUploadModal';
 import ChatInterface, { Message } from '../components/dashboard/ChatInterface';
 import ReviewButton from '../components/dashboard/ReviewButton';
 import { NextPageWithLayout } from './_app';
@@ -50,7 +50,7 @@ const Analyzer: NextPageWithLayout = () => {
   const [queue, setQueue] = useState<ParsedRecord[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Message[] | undefined>(undefined);
-  const [activeStatementContext, setActiveStatementContext] = useState<{ record: any; pdfBase64: string } | null>(null);
+  const [contextId, setContextId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRecords();
@@ -93,43 +93,24 @@ const Analyzer: NextPageWithLayout = () => {
     }
   };
 
-  const handleParsed = async (data: ParsedRecord[]) => {
-    if (!Array.isArray(data) || data.length === 0) return;
+  const handleParsed = async (data: StatementSummary) => {
+    const ctxRes = await fetchApi<string>('/api/chat/create-context', {
+      method: 'POST',
+      body: JSON.stringify({ data })
+    });
 
-    setQueue(data);
-    openNextFromQueue();
-
-    const first = data[0];
-    const recordData: any = first.asset || first.debt;
-    if (recordData) {
-      setRecords(prev => [{ recordType: first.recordType, data: recordData }, ...prev]);
-    }
-
-    const pdfBase64 = recordData?.pdfBase64;
-    const recordType = first.recordType;
-
-    if (recordType && recordData && pdfBase64) {
-      setActiveStatementContext({ record: recordData, pdfBase64 });
-
-      const res = await fetchApi<string>(`/api/review/${recordType}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          record: recordData,
-          pdfBase64,
-          message: 'Please provide a summary, key observations, and actionable recommendations for this statement.'
-        })
-      });
-
-      if (res.success && res.data) {
-        const initialAiMessage: Message = {
-          id: Date.now().toString(),
-          sender: 'ai',
-          text: res.data,
-          timestamp: new Date()
-        };
-        setChatMessages([initialAiMessage]);
-        setChatOpen(true);
-      }
+    if (ctxRes.success && ctxRes.data) {
+      setContextId(ctxRes.data);
+      const initialAiMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: 'Statement processed. Ask me anything about it.',
+        timestamp: new Date()
+      };
+      setChatMessages([initialAiMessage]);
+      setChatOpen(true);
+    } else {
+      setError(ctxRes.error || 'Failed to create context');
     }
   };
 
@@ -148,18 +129,14 @@ const Analyzer: NextPageWithLayout = () => {
   };
 
   const handleSendMessage = async (message: string, history: Message[]): Promise<string> => {
-    if (activeStatementContext) {
-      const { record, pdfBase64 } = activeStatementContext;
-      const recordType = record.lender ? 'debt' : 'asset';
-
-      const res = await fetchApi<string>(`/api/review/${recordType}`, {
+    if (contextId) {
+      const res = await fetchApi<string>('/api/review/statement', {
         method: 'POST',
         body: JSON.stringify({
-          record,
+          contextId,
           message,
-          history: history.map(m => ({ sender: m.sender, text: m.text })),
-          pdfBase64,
-        }),
+          history: history.map(m => ({ sender: m.sender, text: m.text }))
+        })
       });
 
       return res.success ? res.data ?? '' : res.error ?? 'Error getting response.';

@@ -1,41 +1,16 @@
 import { useState } from 'react';
 import { fetchApi } from '../../lib/api-utils';
 
-export interface AssetData {
-  type: string;
-  subtype?: string;
-  name: string;
-  balance: number;
-  interestRate?: number;
-  annualContribution?: number;
-  growthRate?: number;
-  assetClass?: string;
-  statementPath?: string;
-  statementName?: string;
-  pdfBase64?: string;
-}
-
-export interface DebtData {
-  type: string;
-  lender: string;
-  balance: number;
-  interestRate: number;
-  monthlyPayment: number;
-  termLength?: number;
-  statementPath?: string;
-  statementName?: string;
-  pdfBase64?: string;
-}
-
-export interface ParsedStatement {
-  recordType: 'asset' | 'debt' | null;
-  asset?: AssetData;
-  debt?: DebtData;
+export interface StatementSummary {
+  brokerageCompany: string;
+  accountCount: number;
+  accounts: any[];
+  qualitativeSummary: string;
 }
 
 interface Props {
   onClose: () => void;
-  onParsed: (data: ParsedStatement[]) => void;
+  onParsed: (data: StatementSummary) => void;
 }
 
 const StatementUploadModal = ({ onClose, onParsed }: Props) => {
@@ -72,21 +47,12 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
     setIsUploading(true);
     try {
       const base64 = await fileToBase64(file);
-      const response = await fetchApi<ParsedStatement[]>('/api/statement-upload', {
+      const response = await fetchApi<StatementSummary>('/api/statement-upload', {
         method: 'POST',
         body: JSON.stringify({ filename: file.name, file: base64 }),
       });
       if (response.success && response.data) {
-        const augmented = response.data.map(r => {
-          if (r.recordType === 'asset' && r.asset) {
-            return { ...r, asset: { ...r.asset, pdfBase64: base64 } };
-          }
-          if (r.recordType === 'debt' && r.debt) {
-            return { ...r, debt: { ...r.debt, pdfBase64: base64 } };
-          }
-          return r;
-        });
-        onParsed(augmented);
+        onParsed(response.data);
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');
@@ -125,3 +91,4 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
 };
 
 export default StatementUploadModal;
+export type { StatementSummary };
