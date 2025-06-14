@@ -7,9 +7,13 @@ jest.mock('fs', () => ({
   },
 }));
 
-// Mock chat session for Gemini startChat/sendMessage
-const mockSendMessage = jest.fn().mockResolvedValue({ response: { text: () => 'ok' } });
-const mockChatSession = { sendMessage: mockSendMessage };
+// Mock chat session for Gemini startChat/sendMessageStream
+const mockSendMessageStream = jest.fn().mockReturnValue({
+  stream: (async function*() {
+    yield { text: () => 'ok' };
+  })(),
+});
+const mockChatSession = { sendMessageStream: mockSendMessageStream } as any;
 const mockStartChat = jest.fn().mockReturnValue(mockChatSession);
 const mockGetModel = jest.fn().mockReturnValue({ startChat: mockStartChat });
 jest.mock('@google/generative-ai', () => ({
@@ -40,7 +44,7 @@ describe('review api', () => {
     req.body = { contextId, message: 'Hi', history: [] };
     await (handler as any)(req, res);
     expect(mockStartChat).toHaveBeenCalled();
-    expect(mockSendMessage).toHaveBeenCalledWith('Hi');
+    expect(mockSendMessageStream).toHaveBeenCalledWith('Hi');
     expect(res.status).toHaveBeenCalledWith(200);
   });
 });
