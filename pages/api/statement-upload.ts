@@ -95,7 +95,7 @@ Now, analyze the document and provide the corresponding JSON object.`;
         parts: [pdfPart, { text: prompt }],
       },
     ],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
+    generationConfig: { temperature: 0.2, maxOutputTokens: 100000 },
     safetySettings: [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
