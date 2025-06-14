@@ -47,7 +47,6 @@ export default function ReviewModal({ isOpen, onClose, recordType, contextId }: 
     if (isOpen) {
       setMessages([]);
       setInput('');
-      fetchInitial();
     }
   }, [isOpen, contextId]);
 
@@ -55,27 +54,6 @@ export default function ReviewModal({ isOpen, onClose, recordType, contextId }: 
     if (endRef.current) endRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const fetchInitial = async () => {
-    setLoading(true);
-    const res = await fetch(`/api/review/${recordType}`, {
-      method: 'POST',
-      headers: buildAuthHeaders(),
-      body: JSON.stringify({ contextId }),
-    });
-    const data = await res.json();
-    let newAiText = 'Error processing your request.';
-    if (data.success) {
-      if (data.data && data.data.trim() !== '') {
-        newAiText = data.data;
-      } else {
-        newAiText = "[The AI didn't provide a specific observation for that.]";
-      }
-    } else if (data.error) {
-      newAiText = data.error;
-    }
-    setMessages([{ id: Date.now().toString(), sender: 'ai', text: newAiText }]);
-    setLoading(false);
-  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

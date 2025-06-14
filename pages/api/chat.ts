@@ -1,14 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, ApiResponse, authenticate } from '../../lib/api-utils';
 import prisma from '../../lib/prisma';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { startChat, sendMessage } from '../../lib/gemini-service';
 
 type ChatResponse = {
   message: string;
 };
 
-const MODEL_NAME = "gemini-2.5-flash-preview-05-20"; // Or your preferred Gemini model
-const API_KEY = process.env.GEMINI_API_KEY;
 
 const isRetirementAsset = (asset: { subtype?: string | null }) => {
   const subtype = asset.subtype?.toLowerCase() || '';
@@ -23,10 +21,6 @@ export default createApiHandler<ChatResponse>(async (
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  if (!API_KEY) {
-    console.error('GEMINI_API_KEY is not set.');
-    return res.status(500).json({ success: false, error: 'AI service is not configured.' });
-  }
 
   try {
     const userId = await authenticate(req);
@@ -108,45 +102,21 @@ ${goals.map(g => `- ${g.name}: Target $${g.targetAmount.toLocaleString()}, Curre
 
 `;
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    const generationConfig = {
-      temperature: 0.7, // Adjust for creativity vs. factuality
-      topK: 1,
-      topP: 1,
-      maxOutputTokens: 8192, // Adjust as needed
-    };
-
-    const safetySettings = [
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    ];
-    
     const historyForAI = clientHistory.map((msg: { sender: string; text: string }) => ({
       role: msg.sender === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
     }));
 
-    const chat = model.startChat({
-        generationConfig,
-        safetySettings,
-        history: [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: "Understood. I have the user's financial context. I'm ready to help." }] },
-          ...historyForAI
-        ]
-    });
+    const chat = startChat([
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: "Understood. I have the user's financial context. I'm ready to help." }] },
+      ...historyForAI,
+    ]);
 
     console.log('Gemini system prompt:', systemPrompt);
     console.log('Prompt length:', systemPrompt.length);
 
-    const result = await chat.sendMessage(userQuery);
-    console.log('Gemini result:', JSON.stringify(result, null, 2));
-    const aiResponseText = result.response.text();
-    const finalMessage = aiResponseText.trim() || "I'm sorry, I couldn't generate a response.";
+    const finalMessage = await sendMessage(chat, userQuery);
 
     return res.status(200).json({ success: true, data: { message: finalMessage } });
 
