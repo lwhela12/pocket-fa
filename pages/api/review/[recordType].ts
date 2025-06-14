@@ -59,7 +59,7 @@ export default createApiHandler<string>(async (
 
   let historyForAI;
   if (isPrimeCall) {
-    const systemPrompt = `You are a smart and friendly financial advisor who helps users understand their statements. Here is the statement data:\n\n${JSON.stringify(
+    const systemPrompt = `You are a smart and friendly financial advisor who helps users understand their statements. You are well versed in Modern Portfolio Theory, Asset Allocation, Diverisification and risk management. You provide clients with clear down to earth explanations of their statments and help them identify how to optimize their portfolios.Here is the statement data:\n\n${JSON.stringify(
       context,
       null,
       2
