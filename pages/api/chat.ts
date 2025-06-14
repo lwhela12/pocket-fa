@@ -7,7 +7,7 @@ type ChatResponse = {
   message: string;
 };
 
-const MODEL_NAME = "gemini-2.5-flash-preview-04-17"; // Or your preferred Gemini model
+const MODEL_NAME = "gemini-2.5-flash-preview-05-20"; // Or your preferred Gemini model
 const API_KEY = process.env.GEMINI_API_KEY;
 
 const isRetirementAsset = (asset: { subtype?: string | null }) => {

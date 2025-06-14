@@ -30,7 +30,7 @@ export interface StatementSummary {
   qualitativeSummary: string;
 }
 
-const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
 
 async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {

@@ -3,7 +3,7 @@ import { createApiHandler, ApiResponse, authenticate } from '../../../lib/api-ut
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { getContext } from '../../../lib/context-cache';
 
-const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
 
 export default createApiHandler<string>(async (
