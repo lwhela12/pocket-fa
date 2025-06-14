@@ -143,8 +143,7 @@ const Analyzer: NextPageWithLayout = () => {
         method: 'POST',
         body: JSON.stringify({
           contextId,
-          message,
-          history: history.map(m => ({ sender: m.sender, text: m.text }))
+          message
         })
       });
 
