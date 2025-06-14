@@ -7,9 +7,9 @@ import { storeChatSession, getChatSession } from '../../../lib/chat-session-cach
 const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
 
-export default createApiHandler<string>(async (
+export default createApiHandler<void>(async (
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse<string>>
+  res: NextApiResponse<ApiResponse<void>>
 ) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -84,10 +84,21 @@ export default createApiHandler<string>(async (
     return res.status(200).json({ success: true, data: greeting });
   }
 
-  // Follow-up: reuse existing session
+  // Follow-up: reuse existing session and stream response
   const session = getChatSession(contextId)!;
-  const result = await session.sendMessage(message!);
-  const responseText = result.response.text().trim();
-  console.log('← review responseText:', responseText);
-  return res.status(200).json({ success: true, data: responseText });
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive'
+  });
+
+  const stream = await session.sendMessageStream(message!);
+  for await (const chunk of stream.stream) {
+    const text = chunk.text();
+    if (text) {
+      res.write(`data: ${text}\n\n`);
+    }
+  }
+  res.end();
 });

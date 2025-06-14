@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Modal from '../layout/Modal';
-import { fetchApi } from '../../lib/api-utils';
+
+function buildAuthHeaders() {
+  let token: string | null = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token');
+    if (!token && process.env.NODE_ENV === 'development') {
+      token = 'dev-token';
+    }
+  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +35,15 @@ export default function ReviewModal({ isOpen, onClose, recordType, contextId }: 
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    return () => {
+      if (contextId) {
+        const payload = JSON.stringify({ contextId });
+        navigator.sendBeacon('/api/chat/end-session', payload);
+      }
+    };
+  }, [contextId]);
+
+  useEffect(() => {
     if (isOpen) {
       setMessages([]);
       setInput('');
@@ -36,19 +57,21 @@ export default function ReviewModal({ isOpen, onClose, recordType, contextId }: 
 
   const fetchInitial = async () => {
     setLoading(true);
-    const res = await fetchApi<string>(`/api/review/${recordType}`, {
+    const res = await fetch(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ contextId })
+      headers: buildAuthHeaders(),
+      body: JSON.stringify({ contextId }),
     });
+    const data = await res.json();
     let newAiText = 'Error processing your request.';
-    if (res.success) {
-      if (res.data && res.data.trim() !== '') {
-        newAiText = res.data;
+    if (data.success) {
+      if (data.data && data.data.trim() !== '') {
+        newAiText = data.data;
       } else {
         newAiText = "[The AI didn't provide a specific observation for that.]";
       }
-    } else if (res.error) {
-      newAiText = res.error;
+    } else if (data.error) {
+      newAiText = data.error;
     }
     setMessages([{ id: Date.now().toString(), sender: 'ai', text: newAiText }]);
     setLoading(false);
@@ -62,21 +85,29 @@ export default function ReviewModal({ isOpen, onClose, recordType, contextId }: 
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
-    const res = await fetchApi<string>(`/api/review/${recordType}`, {
+
+    const res = await fetch(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ contextId, message: current })
+      headers: buildAuthHeaders(),
+      body: JSON.stringify({ contextId, message: current }),
     });
-    let newAiText = 'Error processing your request.';
-    if (res.success) {
-      if (res.data && res.data.trim() !== '') {
-        newAiText = res.data;
-      } else {
-        newAiText = "[The AI didn't provide a specific observation for that.]";
+
+    const aiId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, { id: aiId, sender: 'ai', text: '' }]);
+
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = '';
+    if (reader) {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        const cleaned = chunk.replace(/data:\s*/g, '');
+        accumulated += cleaned;
+        setMessages(prev => prev.map(m => m.id === aiId ? { ...m, text: accumulated } : m));
       }
-    } else if (res.error) {
-      newAiText = res.error;
     }
-    setMessages(prev => [...prev, { id: (Date.now()+1).toString(), sender: 'ai', text: newAiText }]);
     setLoading(false);
   };
 
