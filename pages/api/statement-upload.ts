@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, ApiResponse, authenticate } from '../../lib/api-utils';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleAIFileManager } from '@google/generative-ai/server';
 import fs from 'fs';
 import path from 'path';
 
@@ -36,24 +37,13 @@ const API_KEY = process.env.GEMINI_API_KEY;
 async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
   if (!API_KEY) throw new Error('Gemini API key not configured');
   const genAI = new GoogleGenerativeAI(API_KEY); // Corrected GoogleGenerativeAI constructor
+  const fileManager = new GoogleAIFileManager(API_KEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+  console.log('Uploading file to Gemini File API...');
   const fileData = await fs.promises.readFile(filePath);
-
-  let pdfPart;
-  console.log(`File size: ${fileData.length} bytes`);
-
-  if (fileData.length > 20 * 1024 * 1024) {
-    console.log('File is larger than 20MB, this may exceed Gemini API limits.');
-    // The Gemini API doesn't support uploading large files separately
-    // We'll still try with inlineData, but it might fail if too large
-    pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
-    
-    // Alternatively, you could implement chunking or file compression here
-    // or use a different approach for very large files
-  } else {
-    console.log('File is smaller than 20MB, using inlineData.');
-    pdfPart = { inlineData: { data: fileData.toString('base64'), mimeType: 'application/pdf' } };
-  }
+  const uploadResult = await fileManager.uploadFile(fileData, { mimeType: 'application/pdf' });
+  console.log(`File uploaded successfully. URI: ${uploadResult.file.uri}`);
+  const pdfPart = { fileData: { mimeType: uploadResult.file.mimeType, fileUri: uploadResult.file.uri } };
 
   const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and extract key information into a single, structured JSON object.
 

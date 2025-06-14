@@ -5,19 +5,22 @@ jest.mock('fs', () => ({
   promises: {
     readFile: jest.fn().mockResolvedValue(Buffer.from('dummy')),
     writeFile: jest.fn().mockResolvedValue(undefined),
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    copyFile: jest.fn().mockResolvedValue(undefined),
+    unlink: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
+// Mock Google generative-ai client and file manager
 jest.mock('@google/generative-ai', () => {
-  const mockGenerate = jest.fn().mockResolvedValue({
-    response: {
-      text: () => '```json\n{"brokerageCompany":"Test","accountCount":1,"accounts":[],"qualitativeSummary":"ok"}\n```',
-    },
-  });
+  const mockUploadFile = jest.fn().mockResolvedValue({ file: { uri: 'fakeUri', mimeType: 'application/pdf' } });
+  const mockGenerate = jest.fn().mockResolvedValue({ response: { text: () => '```json\n{"brokerageCompany":"Test","accountCount":1,"accounts":[],"qualitativeSummary":"ok"}\n```' } });
   const mockModel = { generateContent: mockGenerate };
-  const mockClient = { getGenerativeModel: jest.fn().mockReturnValue(mockModel) };
+  const mockGenAiClient = { getGenerativeModel: jest.fn().mockReturnValue(mockModel) };
+  const MockFileManager = jest.fn().mockImplementation(() => ({ uploadFile: mockUploadFile }));
   return {
-    GoogleGenerativeAI: jest.fn().mockImplementation(() => mockClient),
+    GoogleGenerativeAI: jest.fn().mockImplementation(() => mockGenAiClient),
+    GoogleAIFileManager: MockFileManager,
     HarmCategory: { HARM_CATEGORY_HARASSMENT: 0 },
     HarmBlockThreshold: { BLOCK_MEDIUM_AND_ABOVE: 0 },
   };
@@ -65,7 +68,7 @@ describe('statement-upload', () => {
     req.method = 'POST';
     req.body = { file: Buffer.from('%PDF-1.4...').toString('base64'), filename: 'statement.pdf' };
     await (handler as any)(req, res);
-    expect((require('fs').promises.writeFile)).toHaveBeenCalled();
+    expect(require('fs').promises.writeFile).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,

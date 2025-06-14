@@ -101,14 +101,23 @@ const Analyzer: NextPageWithLayout = () => {
 
     if (ctxRes.success && ctxRes.data) {
       setContextId(ctxRes.data);
-      const initialAiMessage: Message = {
-        id: Date.now().toString(),
-        sender: 'ai',
-        text: 'Statement processed. Ask me anything about it.',
-        timestamp: new Date()
-      };
-      setChatMessages([initialAiMessage]);
-      setChatOpen(true);
+      // Prime the review chat immediately with the statement context
+      const primeRes = await fetchApi<string>('/api/review/statement', {
+        method: 'POST',
+        body: JSON.stringify({ contextId: ctxRes.data }),
+      });
+      if (primeRes.success) {
+        const greeting: Message = {
+          id: Date.now().toString(),
+          sender: 'ai',
+          text: primeRes.data || 'Understood. I have the statement data. How can I help?',
+          timestamp: new Date(),
+        };
+        setChatMessages([greeting]);
+        setChatOpen(true);
+      } else {
+        setError(primeRes.error || 'Failed to initialize review chat');
+      }
     } else {
       setError(ctxRes.error || 'Failed to create context');
     }

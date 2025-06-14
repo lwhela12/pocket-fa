@@ -7,10 +7,11 @@ jest.mock('fs', () => ({
   },
 }));
 
-const mockGenerate = jest.fn().mockResolvedValue({ response: { text: () => 'ok' } });
-const mockModel = { generateContent: mockGenerate };
-const mockGetModel = jest.fn().mockReturnValue(mockModel);
-
+// Mock chat session for Gemini startChat/sendMessage
+const mockSendMessage = jest.fn().mockResolvedValue({ response: { text: () => 'ok' } });
+const mockChatSession = { sendMessage: mockSendMessage };
+const mockStartChat = jest.fn().mockReturnValue(mockChatSession);
+const mockGetModel = jest.fn().mockReturnValue({ startChat: mockStartChat });
 jest.mock('@google/generative-ai', () => ({
   GoogleGenerativeAI: jest.fn().mockImplementation(() => ({ getGenerativeModel: mockGetModel })),
   HarmCategory: { HARM_CATEGORY_HARASSMENT: 0, HARM_CATEGORY_HATE_SPEECH: 1, HARM_CATEGORY_SEXUALLY_EXPLICIT: 2, HARM_CATEGORY_DANGEROUS_CONTENT: 3 },
@@ -38,7 +39,8 @@ describe('review api', () => {
     req.method = 'POST';
     req.body = { contextId, message: 'Hi', history: [] };
     await (handler as any)(req, res);
-    expect(mockGenerate).toHaveBeenCalled();
+    expect(mockStartChat).toHaveBeenCalled();
+    expect(mockSendMessage).toHaveBeenCalledWith('Hi');
     expect(res.status).toHaveBeenCalledWith(200);
   });
 });
