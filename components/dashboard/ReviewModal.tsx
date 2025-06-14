@@ -7,7 +7,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   recordType: 'asset' | 'debt';
-  record: any;
+  contextId: string;
 }
 
 interface Message {
@@ -16,7 +16,7 @@ interface Message {
   text: string;
 }
 
-export default function ReviewModal({ isOpen, onClose, recordType, record }: Props) {
+export default function ReviewModal({ isOpen, onClose, recordType, contextId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
       setInput('');
       fetchInitial();
     }
-  }, [isOpen]);
+  }, [isOpen, contextId]);
 
   useEffect(() => {
     if (endRef.current) endRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -38,7 +38,7 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
     setLoading(true);
     const res = await fetchApi<string>(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ record, history: [], pdfBase64: (record as any).pdfBase64 })
+      body: JSON.stringify({ contextId })
     });
     let newAiText = 'Error processing your request.';
     if (res.success) {
@@ -58,14 +58,13 @@ export default function ReviewModal({ isOpen, onClose, recordType, record }: Pro
     e.preventDefault();
     if (!input.trim()) return;
     const current = input;
-    const historyForServer = messages.map(m => ({ sender: m.sender, text: m.text }));
     const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: current };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
     const res = await fetchApi<string>(`/api/review/${recordType}`, {
       method: 'POST',
-      body: JSON.stringify({ record, message: current, history: historyForServer, pdfBase64: (record as any).pdfBase64 })
+      body: JSON.stringify({ contextId, message: current })
     });
     let newAiText = 'Error processing your request.';
     if (res.success) {
