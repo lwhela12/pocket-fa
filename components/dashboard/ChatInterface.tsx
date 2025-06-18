@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 // All API interactions are handled by the parent component via the onSendMessage prop
@@ -33,6 +33,31 @@ interface ChatInterfaceProps {
    */
   onSendMessage: (message: string, history: Message[]) => Promise<string>;
 }
+
+// Memoized component for rendering individual chat messages. Prevents
+// unnecessary re-renders when other state updates occur in the parent.
+const MemoizedMessage = memo(function Message({ message }: { message: Message }) {
+  return (
+    <div
+      className={`mb-4 flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+    >
+      <div
+        className={`rounded-lg px-4 py-2 ${
+          message.sender === 'user'
+            ? 'bg-primary text-white'
+            : 'bg-gray-200 text-gray-800'
+        } max-w-full`}
+      >
+        <ReactMarkdown className="prose whitespace-pre-wrap break-words text-sm">
+          {message.text}
+        </ReactMarkdown>
+        <p className="mt-1 text-right text-xs opacity-70">
+          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
+    </div>
+  );
+});
 
 export default function ChatInterface({ open = false, initialMessages, onSendMessage }: ChatInterfaceProps) {
   const [isOpen, setIsOpen] = useState(open);
@@ -166,25 +191,7 @@ export default function ChatInterface({ open = false, initialMessages, onSendMes
             {/* Chat messages */}
             <div className="flex-1 overflow-y-auto p-4">
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`mb-4 flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`rounded-lg px-4 py-2 ${
-                      message.sender === 'user'
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-200 text-gray-800'
-                    } max-w-full`}
-                  >
-                    <ReactMarkdown className="prose whitespace-pre-wrap break-words text-sm">
-                      {message.text}
-                    </ReactMarkdown>
-                    <p className="mt-1 text-right text-xs opacity-70">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
+                <MemoizedMessage key={message.id} message={message} />
               ))}
               
               {isTyping && (
