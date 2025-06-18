@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Navbar from './Navbar';
 import { useAuth } from '../../hooks/useAuth';
+import ChatInterface from '../dashboard/ChatInterface';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -59,6 +60,7 @@ export default function DashboardLayout({
             </p>
           </div>
         </footer>
+        <ChatInterface />
       </div>
     </>
   );

@@ -42,6 +42,22 @@ model Profile {
   updatedAt        DateTime @updatedAt
 }
 
+model Statement {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName         String
+  filePath         String    @unique
+  brokerageCompany String?
+  parsedData       Json?
+  status           String    @default("PROCESSING")
+  error            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  assets           Asset[]
+  debts            Debt[]
+}
+
 model Asset {
   id               String   @id @default(uuid())
   userId           String
@@ -54,8 +70,8 @@ model Asset {
   annualContribution Float?
   growthRate       Float?
   assetClass       String?  // "Stocks", "Bonds", "ETFs", "Mutual Funds"
-  statementPath    String?
-  statementName    String?
+  statementId      String?
+  statement        Statement? @relation(fields: [statementId], references: [id])
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -70,8 +86,8 @@ model Debt {
   interestRate     Float
   monthlyPayment   Float
   termLength       Int?     // in months
-  statementPath    String?
-  statementName    String?
+  statementId      String?
+  statement        Statement? @relation(fields: [statementId], references: [id])
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

@@ -1,151 +1,100 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, ApiResponse, authenticate } from '../../lib/api-utils';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import { GoogleAIFileManager } from '@google/generative-ai/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs';
 import path from 'path';
-
-interface Position {
-  name: string;
-  symbol: string;
-  shares: number | null;
-  marketValue: number;
-}
-
-interface AccountSummary {
-  accountType: string;
-  accountNumber?: string;
-  balance: number;
-  positions: Position[];
-  activity: {
-    deposits: number;
-    withdrawals: number;
-  };
-  fees: number;
-}
+import prisma from '../../lib/prisma';
+import { Statement } from '@prisma/client';
 
 export interface StatementSummary {
   brokerageCompany: string;
   accountCount: number;
-  accounts: AccountSummary[];
+  accounts: any[];
   qualitativeSummary: string;
 }
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
 
-async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
+async function analyzeWithGemini(filePath: string): Promise<any> {
   if (!API_KEY) throw new Error('Gemini API key not configured');
-  const genAI = new GoogleGenerativeAI(API_KEY); // Corrected GoogleGenerativeAI constructor
-  const fileManager = new GoogleAIFileManager(API_KEY);
+  const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-  console.log('Uploading file to Gemini File API...');
-  const fileData = await fs.promises.readFile(filePath);
-  const uploadResult = await fileManager.uploadFile(fileData, { mimeType: 'application/pdf' });
-  console.log(`File uploaded successfully. URI: ${uploadResult.file.uri}`);
-  const pdfPart = { fileData: { mimeType: uploadResult.file.mimeType, fileUri: uploadResult.file.uri } };
 
-  const prompt = `You are an expert financial statement parser. Your task is to analyze the provided PDF and extract key information into a single, structured JSON object.
+  const prompt = `You are an expert statement parser. Read the PDF and return a JSON summary.`;
 
-You MUST return ONLY the JSON object and nothing else. Do not wrap it in markdown.
+  const fileBuffer = await fs.promises.readFile(filePath);
 
-### JSON Schema to follow:
-{
-  "brokerageCompany": "string",
-  "accountCount": "number",
-  "accounts": [
-    {
-      "accountType": "string (e.g., '401(k)', 'Roth IRA', 'Taxable')",
-      "accountNumber": "string (last 4 digits if available)",
-      "balance": "number",
-      "positions": [
-        {
-          "name": "string (e.g., 'Fidelity 500 Index Fund')",
-          "symbol": "string (e.g., 'FXAIX')",
-          "shares": "number | null",
-          "marketValue": "number"
-        }
-      ],
-      "activity": {
-        "deposits": "number",
-        "withdrawals": "number"
-      },
-      "fees": "number"
-    }
-  ],
-  "qualitativeSummary": "string (A one or two-sentence summary of other important observations, such as unpriced securities, large one-time transactions, or missing data.)"
-}
----
-Now, analyze the document and provide the corresponding JSON object.`;
-  
   const result = await model.generateContent({
-    contents: [
-      {
-        role: 'user',
-        parts: [pdfPart, { text: prompt }],
-      },
-    ],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 100000 },
-    safetySettings: [
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ],
+    contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'application/pdf', data: fileBuffer.toString('base64') } }, { text: prompt }] }],
   });
-  console.log('Gemini response:', result.response.text());
-  const rawText = result.response.text().trim();
-  if (!rawText) {
-    throw new Error('Received empty response from Gemini.');
-  }
 
-  const fenced = rawText.match(/```json\s*([\s\S]*?)```/i)?.[1]?.trim();
-  const candidate = fenced || rawText;
+  const rawText = result.response.text().trim();
+  const jsonMatch = rawText.match(/```json\s*([\s\S]*?)```/s);
+  const jsonString = jsonMatch ? jsonMatch[1] : rawText;
 
   try {
-    return JSON.parse(candidate);
-  } catch (e: any) {
-    console.error(
-      'Failed to parse JSON from Gemini. Candidate text was:', candidate,
-      '\nFull raw response was:', rawText,
-      '\nError:', e
-    );
-    throw new Error(`AI response was not valid JSON: ${e.message}`);
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.error('Failed to parse JSON from Gemini response:', jsonString);
+    throw new Error('AI response was not valid JSON.');
   }
 }
 
-export default createApiHandler<StatementSummary>(async (
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse<StatementSummary>>
-) => {
+export default createApiHandler<Statement>(async (req: NextApiRequest, res: NextApiResponse<ApiResponse<Statement>>) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   const userId = await authenticate(req);
-
   const { file, filename } = req.body as { file?: string; filename?: string };
+
   if (!file || !filename) {
-    return res.status(400).json({ success: false, error: 'File is required' });
+    return res.status(400).json({ success: false, error: 'File and filename are required.' });
   }
   if (!filename.toLowerCase().endsWith('.pdf')) {
     return res.status(400).json({ success: false, error: 'Only PDF files are allowed' });
   }
 
+  const statementRecord = await prisma.statement.create({
+    data: { userId, fileName: filename, filePath: '', status: 'UPLOADING' },
+  });
+
+  const tempPath = path.join('/tmp', `${statementRecord.id}.pdf`);
   const buffer = Buffer.from(file, 'base64');
-  const tempPath = path.join('/tmp', `${userId}-${Date.now()}-${filename}`);
-  await fs.promises.writeFile(tempPath, buffer);
-  const publicDir = path.join(process.cwd(), 'public', 'statements');
-  await fs.promises.mkdir(publicDir, { recursive: true });
-  const destName = `${userId}-${Date.now()}-${filename}`;
-  const destPath = path.join(publicDir, destName);
+
   try {
-    const parsed = await analyzeWithGemini(tempPath);
+    await fs.promises.writeFile(tempPath, buffer);
+    const publicDir = path.join(process.cwd(), 'public', 'statements');
+    await fs.promises.mkdir(publicDir, { recursive: true });
+    const publicPath = `/statements/${statementRecord.id}.pdf`;
+    const destPath = path.join(publicDir, `${statementRecord.id}.pdf`);
     await fs.promises.copyFile(tempPath, destPath);
-    return res.status(200).json({ success: true, data: parsed });
+
+    await prisma.statement.update({
+      where: { id: statementRecord.id },
+      data: { filePath: publicPath, status: 'PROCESSING' },
+    });
+
+    const parsedData = await analyzeWithGemini(destPath);
+
+    const finalStatement = await prisma.statement.update({
+      where: { id: statementRecord.id },
+      data: {
+        status: 'COMPLETED',
+        brokerageCompany: parsedData.brokerageCompany,
+        parsedData: parsedData as any,
+      },
+    });
+
+    return res.status(200).json({ success: true, data: finalStatement });
   } catch (error: any) {
+    await prisma.statement.update({
+      where: { id: statementRecord.id },
+      data: { status: 'FAILED', error: error.message },
+    });
     console.error('Statement upload error:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Failed to analyze statement' });
+    return res.status(500).json({ success: false, error: error.message });
   } finally {
     fs.promises.unlink(tempPath).catch(() => {});
   }
