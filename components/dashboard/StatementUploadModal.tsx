@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { fetchApi } from '../../lib/api-utils';
 import { useFinancialAssistant } from '../../lib/financial-assistant-context';
+import { Statement } from '@prisma/client';
 
 export interface StatementSummary {
   brokerageCompany: string;
@@ -12,14 +13,14 @@ export interface StatementSummary {
 
 interface Props {
   onClose: () => void;
-  onParsed: (data: StatementSummary) => void;
+  onParsed?: (data: Statement) => void;
 }
 
 const StatementUploadModal = ({ onClose, onParsed }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { setContextId, setOpen } = useFinancialAssistant();
+  const { openChat } = useFinancialAssistant();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -45,27 +46,18 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
     });
   };
 
-const handleUpload = async () => {
+  const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
     try {
       const base64 = await fileToBase64(file);
-      const response = await fetchApi<StatementSummary>('/api/statement-upload', {
+      const response = await fetchApi<Statement>('/api/statement-upload', {
         method: 'POST',
         body: JSON.stringify({ filename: file.name, file: base64 }),
       });
       if (response.success && response.data) {
-        onParsed(response.data);
-        // create context and open assistant
-        const ctxRes = await fetchApi<string>('/api/chat/create-context', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: response.data }),
-        });
-        if (ctxRes.success && ctxRes.data) {
-          setContextId(ctxRes.data);
-          setOpen(true);
-        }
+        onParsed(response.data as any);
+        openChat('statement', response.data.id);
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');

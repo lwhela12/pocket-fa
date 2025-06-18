@@ -1,29 +1,45 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface FinancialAssistantState {
-  contextId: string | null;
-  open: boolean;
-  setContextId: (id: string | null) => void;
-  setOpen: (open: boolean) => void;
+  isChatOpen: boolean;
+  chatMode: 'holistic' | 'statement';
+  activeStatementId: string | null;
+  openChat: (mode: 'holistic' | 'statement', statementId?: string) => void;
+  closeChat: () => void;
 }
 
-const FinancialAssistantContext = createContext<FinancialAssistantState>({
-  contextId: null,
-  open: false,
-  setContextId: () => {},
-  setOpen: () => {},
-});
+const FinancialAssistantContext = createContext<FinancialAssistantState | null>(null);
 
 export function FinancialAssistantProvider({ children }: { children: ReactNode }) {
-  const [contextId, setContextId] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<'holistic' | 'statement'>('holistic');
+  const [activeStatementId, setActiveStatementId] = useState<string | null>(null);
+
+  const openChat = (mode: 'holistic' | 'statement', statementId?: string) => {
+    setChatMode(mode);
+    setActiveStatementId(statementId || null);
+    setIsChatOpen(true);
+  };
+
+  const closeChat = () => {
+    setIsChatOpen(false);
+    setTimeout(() => {
+      setChatMode('holistic');
+      setActiveStatementId(null);
+    }, 300);
+  };
+
+  const value = { isChatOpen, chatMode, activeStatementId, openChat, closeChat };
+
   return (
-    <FinancialAssistantContext.Provider value={{ contextId, open, setContextId, setOpen }}>
+    <FinancialAssistantContext.Provider value={value}>
       {children}
     </FinancialAssistantContext.Provider>
   );
 }
 
 export function useFinancialAssistant() {
-  return useContext(FinancialAssistantContext);
+  const ctx = useContext(FinancialAssistantContext);
+  if (!ctx) throw new Error('useFinancialAssistant must be used within provider');
+  return ctx;
 }
