@@ -28,7 +28,11 @@ export default createApiHandler<ChatResponse>(async (
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
-    const { message: userQuery, history: clientHistory = [] } = req.body;
+    const { message: userQuery, history: clientHistory = [] } = req.body as {
+      message?: string;
+      history?: { sender: string; text: string }[];
+      contextId?: string;
+    };
 
     if (!userQuery) {
       return res.status(400).json({ success: false, error: 'Message is required' });

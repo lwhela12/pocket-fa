@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { fetchApi } from '../../lib/api-utils';
+import { useFinancialAssistant } from '../../lib/financial-assistant-context';
 
 export interface StatementSummary {
   brokerageCompany: string;
@@ -17,6 +19,7 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { setContextId, setOpen } = useFinancialAssistant();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -42,7 +45,7 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
     });
   };
 
-  const handleUpload = async () => {
+const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
     try {
@@ -53,6 +56,16 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
       });
       if (response.success && response.data) {
         onParsed(response.data);
+        // create context and open assistant
+        const ctxRes = await fetchApi<string>('/api/chat/create-context', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: response.data }),
+        });
+        if (ctxRes.success && ctxRes.data) {
+          setContextId(ctxRes.data);
+          setOpen(true);
+        }
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');

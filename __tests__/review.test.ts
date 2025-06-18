@@ -24,7 +24,13 @@ jest.mock('@google/generative-ai', () => ({
 
 const createMocks = () => {
   const req: any = { method: 'GET', query: { recordType: 'statement' }, body: {}, headers: {} };
-  const res: any = { status: jest.fn(() => res), json: jest.fn(() => res) };
+  const res: any = {
+    status: jest.fn(() => res),
+    json: jest.fn(() => res),
+    writeHead: jest.fn(),
+    write: jest.fn(),
+    end: jest.fn(),
+  };
   return { req, res };
 };
 
@@ -45,6 +51,15 @@ describe('review api', () => {
     await (handler as any)(req, res);
     expect(mockStartChat).toHaveBeenCalled();
     expect(mockSendMessageStream).toHaveBeenCalledWith('Hi');
-    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.writeHead).toHaveBeenCalledWith(
+      200,
+      expect.objectContaining({
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+      })
+    );
+    expect(res.write).toHaveBeenCalledWith('data: ok\n\n');
+    expect(res.end).toHaveBeenCalled();
   });
 });
