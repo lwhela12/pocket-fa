@@ -60,7 +60,7 @@ export async function authenticate(req: NextApiRequest): Promise<string> {
 
 // Client-side API fetch utility
 export const fetchApi = async <T = any>(
-  url: string, 
+  url: string,
   options?: RequestInit,
   suppressErrors = false
 ): Promise<ApiResponse<T>> => {
@@ -120,5 +120,33 @@ export const fetchApi = async <T = any>(
       success: false,
       error: error.message || 'An unexpected error occurred',
     };
+  }
+};
+
+// Utility to consume a Server-Sent Events (SSE) stream
+export const fetchSSE = async (
+  url: string,
+  options: RequestInit,
+  onMessage: (data: string) => void
+) => {
+  const res = await fetch(url, options);
+  if (!res.body) throw new Error('No response body');
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+    for (const part of parts) {
+      const cleaned = part.replace(/^data:\s*/, '').trim();
+      if (cleaned) {
+        onMessage(JSON.parse(cleaned));
+      }
+    }
   }
 };

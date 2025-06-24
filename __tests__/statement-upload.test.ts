@@ -1,7 +1,19 @@
+process.env.GEMINI_API_KEY = 'test-key';
 import handler from '../pages/api/statement-upload';
+
+jest.mock('../lib/prisma', () => ({
+  __esModule: true,
+  default: {
+    statement: {
+      create: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: null, parsedData: null, status: 'UPLOADING', error: null, createdAt: new Date(), updatedAt: new Date() }),
+      update: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: 'Test', parsedData: { brokerageCompany: 'Test', accountCount: 1, accounts: [], qualitativeSummary: 'ok' }, status: 'COMPLETED', error: null, createdAt: new Date(), updatedAt: new Date() }),
+    },
+  },
+}));
 
 // Mock file system and AI client for successful parsing
 jest.mock('fs', () => ({
+  existsSync: jest.fn().mockReturnValue(true),
   promises: {
     readFile: jest.fn().mockResolvedValue(Buffer.from('dummy')),
     writeFile: jest.fn().mockResolvedValue(undefined),
@@ -36,6 +48,7 @@ describe('statement-upload', () => {
   beforeAll(() => {
     // Allow authenticate dev-fallback to work in tests
     process.env.NODE_ENV = 'development';
+    process.env.GEMINI_API_KEY = 'test-key';
   });
 
   it('rejects non-POST', async () => {
@@ -50,7 +63,7 @@ describe('statement-upload', () => {
     req.body = {};
     await (handler as any)(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ success: false, error: 'File is required' });
+    expect(res.json).toHaveBeenCalledWith({ success: false, error: 'File and filename are required.' });
   });
 
   it('rejects non-PDF filenames', async () => {
@@ -70,14 +83,14 @@ describe('statement-upload', () => {
     await (handler as any)(req, res);
     expect(require('fs').promises.writeFile).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      success: true,
-      data: {
-        brokerageCompany: 'Test',
-        accountCount: 1,
-        accounts: [],
-        qualitativeSummary: 'ok'
-      },
+    const json = res.json.mock.calls[0][0];
+    expect(json.success).toBe(true);
+    expect(json.data.brokerageCompany).toBe('Test');
+    expect(json.data.parsedData).toEqual({
+      brokerageCompany: 'Test',
+      accountCount: 1,
+      accounts: [],
+      qualitativeSummary: 'ok',
     });
   });
 });
