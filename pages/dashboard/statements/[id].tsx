@@ -20,12 +20,31 @@ const StatementDetailPage: NextPageWithLayout = () => {
 
   if (!statement) return <p>Loading...</p>;
 
+  const data: any = statement.parsedData || {};
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h1 className="text-2xl font-bold">{statement.fileName}</h1>
-      <pre className="whitespace-pre-wrap break-words bg-gray-50 p-4 rounded-md text-sm">
-        {JSON.stringify(statement.parsedData, null, 2)}
-      </pre>
+      {data.brokerageCompany && (
+        <p className="text-lg font-medium">Brokerage: {data.brokerageCompany}</p>
+      )}
+      {data.qualitativeSummary && (
+        <p className="rounded-md bg-gray-50 p-4 text-sm whitespace-pre-wrap">
+          {data.qualitativeSummary}
+        </p>
+      )}
+      {Array.isArray(data.accounts) && data.accounts.length > 0 && (
+        <div className="space-y-4">
+          {data.accounts.map((acc: any, idx: number) => (
+            <div key={idx} className="rounded-md border p-4">
+              <h3 className="mb-2 font-semibold">Account {acc.name || idx + 1}</h3>
+              <pre className="whitespace-pre-wrap break-words text-sm">
+                {JSON.stringify(acc, null, 2)}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

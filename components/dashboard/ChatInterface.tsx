@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFinancialAssistant } from '../../lib/financial-assistant-context';
+import { fetchSSE } from '../../lib/api-utils';
 
 export type Message = { id: string; sender: 'user' | 'ai'; text: string; timestamp: Date };
 
@@ -57,29 +58,23 @@ export default function ChatInterface() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch('/api/chat/stream', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        message: userMessage.text,
-        history: updatedMessages.map(m => ({ sender: m.sender, text: m.text })),
-        statementId: chatMode === 'statement' ? activeStatementId : undefined,
-      }),
-    });
-
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
     let acc = '';
-    if (reader) {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const cleaned = chunk.replace(/data:\s*/g, '');
-        acc += JSON.parse(cleaned);
+    await fetchSSE(
+      '/api/chat/stream',
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message: userMessage.text,
+          history: updatedMessages.map(m => ({ sender: m.sender, text: m.text })),
+          statementId: chatMode === 'statement' ? activeStatementId : undefined,
+        }),
+      },
+      chunk => {
+        acc += chunk;
         setMessages(prev => prev.map(m => (m.id === aiId ? { ...m, text: acc } : m)));
-      }
-    }
+      },
+    );
     setIsTyping(false);
   };
 
