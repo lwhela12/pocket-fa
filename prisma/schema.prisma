@@ -11,21 +11,22 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  password         String
-  mfaEnabled       Boolean  @default(false)
-  mfaType          String?  // "sms" or "app"
-  phoneNumber      String?
-  mfaSecret        String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  profile          Profile?
-  assets           Asset[]
-  debts            Debt[]
-  expenseRecords   ExpenseRecord[]
+  id                String            @id @default(uuid())
+  email             String            @unique
+  password          String
+  mfaEnabled        Boolean           @default(false)
+  mfaType           String? // "sms" or "app"
+  phoneNumber       String?
+  mfaSecret         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  profile           Profile?
+  assets            Asset[]
+  debts             Debt[]
+  expenseRecords    ExpenseRecord[]
   insurancePolicies InsurancePolicy[]
-  financialGoals   FinancialGoal[]
+  financialGoals    FinancialGoal[]
+  Statement         Statement[]
 }
 
 model Profile {
@@ -34,7 +35,7 @@ model Profile {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   age              Int?
   retirementAge    Int?
-  riskTolerance    String?  // "Conservative", "Moderate", "Aggressive"
+  riskTolerance    String? // "Conservative", "Moderate", "Aggressive"
   inflationRate    Float?   @default(3.0)
   investmentReturn Float?   @default(7.0)
   savingsRate      Float?   @default(10.0)
@@ -45,92 +46,92 @@ model Profile {
 model Statement {
   id               String   @id @default(cuid())
   userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fileName         String
-  filePath         String    @unique
+  filePath         String   @unique
   brokerageCompany String?
   parsedData       Json?
-  status           String    @default("PROCESSING")
+  status           String   @default("PROCESSING")
   error            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   assets           Asset[]
   debts            Debt[]
 }
 
 model Asset {
-  id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type             String   // "Cash", "Investment"
-  subtype          String?  // "Checking", "Savings", "Roth IRA", "Traditional IRA", "401(k)", "Taxable"
-  name             String
-  balance          Float
-  interestRate     Float?
+  id                 String     @id @default(uuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type               String // "Cash", "Investment"
+  subtype            String? // "Checking", "Savings", "Roth IRA", "Traditional IRA", "401(k)", "Taxable"
+  name               String
+  balance            Float
+  interestRate       Float?
   annualContribution Float?
-  growthRate       Float?
-  assetClass       String?  // "Stocks", "Bonds", "ETFs", "Mutual Funds"
-  statementId      String?
-  statement        Statement? @relation(fields: [statementId], references: [id])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  growthRate         Float?
+  assetClass         String? // "Stocks", "Bonds", "ETFs", "Mutual Funds"
+  statementId        String?
+  statement          Statement? @relation(fields: [statementId], references: [id])
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }
 
 model Debt {
-  id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type             String   // "Credit Card", "Mortgage", "Student Loan", "Auto Loan"
-  lender           String
-  balance          Float
-  interestRate     Float
-  monthlyPayment   Float
-  termLength       Int?     // in months
-  statementId      String?
-  statement        Statement? @relation(fields: [statementId], references: [id])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id             String     @id @default(uuid())
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String // "Credit Card", "Mortgage", "Student Loan", "Auto Loan"
+  lender         String
+  balance        Float
+  interestRate   Float
+  monthlyPayment Float
+  termLength     Int? // in months
+  statementId    String?
+  statement      Statement? @relation(fields: [statementId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 model ExpenseRecord {
-  id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isDetailed       Boolean  @default(false)
-  totalMonthly     Float?
-  housing          Float?
-  utilities        Float?
-  groceries        Float?
-  dining           Float?
-  transport        Float?
-  healthcare       Float?
-  entertainment    Float?
-  miscellaneous    Float?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDetailed    Boolean  @default(false)
+  totalMonthly  Float?
+  housing       Float?
+  utilities     Float?
+  groceries     Float?
+  dining        Float?
+  transport     Float?
+  healthcare    Float?
+  entertainment Float?
+  miscellaneous Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model InsurancePolicy {
-  id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type             String   // "Life", "Disability", "Long-Term Care"
-  coverage         Float
-  isEmployerProvided Boolean @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type               String // "Life", "Disability", "Long-Term Care"
+  coverage           Float
+  isEmployerProvided Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model FinancialGoal {
-  id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name             String
-  targetAmount     Float
-  currentAmount    Float
-  targetDate       DateTime?
-  isActive         Boolean  @default(true)
-  priority         Int      @default(1) // 1 (highest) to 5 (lowest)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  targetAmount  Float
+  currentAmount Float
+  targetDate    DateTime?
+  isActive      Boolean   @default(true)
+  priority      Int       @default(1) // 1 (highest) to 5 (lowest)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
