@@ -6,6 +6,7 @@ This is a financial advisor app targeted at young professionals (25-45) that pro
 ## Technology Stack
 - **Frontend:** React/Next.js with TypeScript, Tailwind CSS, Framer Motion, shadcn/ui
 - **Backend:** Node.js with Express, PostgreSQL with Prisma ORM
+- **Statement Analyzer:** See [docs/STATEMENT_ANALYZER.md](docs/STATEMENT_ANALYZER.md)
 - **AI Integration:** Gemini 2.0 Pro API for document analysis and financial insights
 
 ## Build & Test Commands

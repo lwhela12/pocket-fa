@@ -28,7 +28,8 @@ The standards document is well-organized and aligns with best practices for a fi
   \- \*\*Scalability\*\*: Mention potential use of microservices if the app’s scope expands, ensuring modularity and resilience.
 
 \#\#\# 1.3. AI & LLM Integration  
-\- \*\*Current\*\*: Gemini 2.0 Pro API for data extraction and chat interactions.  
+\- **Core Feature**: Statement Analyzer (PDF upload, parsing, detail view, AI review) — see [docs/STATEMENT_ANALYZER.md](docs/STATEMENT_ANALYZER.md)
+\- **Current**: Gemini 2.0 Pro API for data extraction and chat interactions.  
 \- \*\*Strengths\*\*:  
   \- Using Gemini for PDF processing and natural language insights is innovative and aligns with the app’s goals.  
 \- \*\*Suggestions\*\*:  

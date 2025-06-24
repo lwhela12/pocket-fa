@@ -94,14 +94,8 @@ Users can input financial data with flexible granularity. Below are the required
   \- Housing, Food, Transportation, Healthcare, Entertainment, Miscellaneous.  
   \- Each category ≥ 0, in USD.
 
-\#\#\# \*\*3.2. Statement Upload\*\*  
-\- \*\*Supported Formats:\*\* PDF statements from major institutions (e.g., Chase, Wells Fargo, Fidelity, Vanguard).  
-\- \*\*Data Extraction:\*\* Using Gemini 2.0 Pro API to extract:  
-  \- Account balances.  
-  \- Transaction history (last 3 months).  
-  \- Investment holdings (e.g., stock vs. bond percentages).  
-  \- Fees (e.g., expense ratios, management fees).  
-\- \*\*Manual Override:\*\* Users can edit extracted data via a form if inaccuracies occur.
+### **3.2. Statement Analyzer**
+For detailed architecture, flow, and UI, see [docs/STATEMENT_ANALYZER.md](docs/STATEMENT_ANALYZER.md).
 
 \#\#\# \*\*3.3. Validation Rules\*\*  
 \- \*\*Balances:\*\* ≥ 0\.  
@@ -159,9 +153,8 @@ Users can input financial data with flexible granularity. Below are the required
 
 \#\# \*\*6. Chat Interfaces\*\*
 
-\#\#\# \*\*6.1. LLM-Powered Statement Analysis\*\*  
-\- \*\*Scope:\*\* Users can query uploaded statements (e.g., "What’s my stock allocation?" or "How much were my fees last month?").  
-\- \*\*Implementation:\*\* Gemini 2.0 Pro API parses statements and responds.
+### **6.1. Statement Analyzer Chat**
+For detailed prompt construction and single‑ vs. multi‑statement integration, see [docs/STATEMENT_ANALYZER.md](docs/STATEMENT_ANALYZER.md).
 
 \#\#\# \*\*6.2. Financial Insight Chat\*\*  
 \- \*\*Scope:\*\* General financial questions (e.g., "Am I saving enough for retirement?" or "How do I pay off my debt faster?").  

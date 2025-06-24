@@ -95,14 +95,8 @@
 
 \---
 
-\#\# 5\. Document Upload & Data Extraction  
-\- \*\*Upload Feature:\*\*  
-  \- Drag-and-drop area with a 10MB file size limit.  
-  \- Only PDFs from recognized institutions (e.g., Chase, Fidelity) accepted.  
-  \- Unsupported files trigger an error toast: "Please upload a valid PDF from a supported institution."  
-\- \*\*Extraction UI:\*\*  
-  \- Spinner during upload.  
-  \- Post-extraction, a summary screen displays extracted data (e.g., balance, date) with editable fields for manual adjustments.
+## 5. Statement Analyzer
+For current UI spec, flow, and API details of statement upload and review, see [docs/STATEMENT_ANALYZER.md](docs/STATEMENT_ANALYZER.md).
 
 \---
 
