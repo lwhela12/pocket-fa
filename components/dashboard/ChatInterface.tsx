@@ -70,14 +70,26 @@ export default function ChatInterface() {
     const reader = res.body?.getReader();
     const decoder = new TextDecoder();
     let acc = '';
+    let buffer = '';
     if (reader) {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        const cleaned = chunk.replace(/data:\s*/g, '');
-        acc += JSON.parse(cleaned);
-        setMessages(prev => prev.map(m => (m.id === aiId ? { ...m, text: acc } : m)));
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+        for (const part of parts) {
+          const cleaned = part.replace(/data:\s*/g, '').trim();
+          if (!cleaned) continue;
+          try {
+            acc += JSON.parse(cleaned);
+            setMessages(prev =>
+              prev.map(m => (m.id === aiId ? { ...m, text: acc } : m))
+            );
+          } catch (err) {
+            console.error('Failed to parse chunk', cleaned, err);
+          }
+        }
       }
     }
     setIsTyping(false);

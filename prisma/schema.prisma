@@ -23,6 +23,7 @@ model User {
   profile          Profile?
   assets           Asset[]
   debts            Debt[]
+  statements       Statement[]
   expenseRecords   ExpenseRecord[]
   insurancePolicies InsurancePolicy[]
   financialGoals   FinancialGoal[]

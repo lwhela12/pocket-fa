@@ -22,10 +22,15 @@ const StatementDetailPage: NextPageWithLayout = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">{statement.fileName}</h1>
-      <pre className="whitespace-pre-wrap break-words bg-gray-50 p-4 rounded-md text-sm">
-        {JSON.stringify(statement.parsedData, null, 2)}
-      </pre>
+      <div className="card">
+        <h1 className="text-2xl font-bold">{statement.fileName}</h1>
+        {statement.brokerageCompany && (
+          <p className="text-sm text-gray-500">{statement.brokerageCompany}</p>
+        )}
+        <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-gray-50 p-4 text-sm">
+          {JSON.stringify(statement.parsedData, null, 2)}
+        </pre>
+      </div>
     </div>
   );
 };
