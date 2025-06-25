@@ -1,103 +1,58 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import useSWR from 'swr';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { fetchApi } from '../../../lib/api-utils';
+import StatementDetails from '../../../components/dashboard/StatementDetails';
 import { Statement } from '@prisma/client';
-import { NextPageWithLayout } from '../../_app';
-import { formatCurrency } from '../../../utils/format';
+import { fetchApi } from '../../../lib/api-utils'; // Import the correct fetcher
 
-const StatementDetailPage: NextPageWithLayout = () => {
+// Use the project-specific fetchApi utility for SWR
+const fetcher = (url: string) => fetchApi(url).then(res => {
+  if (!res.success) {
+    throw new Error(res.error);
+  }
+  return res;
+});
+
+export default function StatementDetailPage() {
   const router = useRouter();
   const { id } = router.query;
-  const [statement, setStatement] = useState<Statement | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id || Array.isArray(id)) return;
-    (async () => {
-      setIsLoading(true);
-      const res = await fetchApi<Statement>(`/api/statements/${id}`);
-      if (res.success && res.data) {
-        setStatement(res.data);
-        setError(null);
-      } else {
-        setError(res.error || 'Failed to fetch statement');
-      }
-      setIsLoading(false);
-    })();
-  }, [id]);
-  if (isLoading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-500">Error: {error}</p>;
-  if (!statement) return null;
+  const { data, error } = useSWR<{ success: boolean, data?: Statement, error?: string }>(id ? `/api/statements/${id}` : null, fetcher);
 
-  const data: any = statement.parsedData || {};
+  const handleReview = () => {
+    // Placeholder for chat review functionality
+    console.log(`Reviewing statement ${id} with AI...`);
+  };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{statement.fileName}</h1>
-      {data.brokerageCompany && (
-        <p className="text-lg font-medium">Brokerage: {data.brokerageCompany}</p>
-      )}
-      {data.qualitativeSummary && (
-        <p className="rounded-md bg-gray-50 p-4 text-sm whitespace-pre-wrap">
-          {data.qualitativeSummary}
-        </p>
-      )}
-      {Array.isArray(data.accounts) && data.accounts.length > 0 && (
-        <div className="space-y-4">
-          {data.accounts.map((acc: any, idx: number) => (
-            <div key={idx} className="space-y-2 rounded-md border p-4">
-              <h3 className="font-semibold">{acc.name || `Account ${idx + 1}`}</h3>
-              {acc.type && <p className="text-sm text-gray-500">{acc.type}</p>}
-              {typeof acc.balance === 'number' && (
-                <p>Balance: {formatCurrency(acc.balance)}</p>
-              )}
-              {typeof acc.annualContribution === 'number' && (
-                <p>Annual Contribution: {formatCurrency(acc.annualContribution)}</p>
-              )}
-              {Array.isArray(acc.positions) && acc.positions.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className="text-left">Name</th>
-                        <th className="text-right">Quantity</th>
-                        <th className="text-right">Price</th>
-                        <th className="text-right">Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {acc.positions.map((pos: any, pIdx: number) => (
-                        <tr key={pIdx} className="border-t">
-                          <td>{pos.name}</td>
-                          <td className="text-right">{pos.quantity}</td>
-                          <td className="text-right">
-                            {typeof pos.price === 'number'
-                              ? formatCurrency(pos.price)
-                              : pos.price}
-                          </td>
-                          <td className="text-right">
-                            {typeof pos.value === 'number'
-                              ? formatCurrency(pos.value)
-                              : pos.value}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+    <DashboardLayout>
+      <div className="container mx-auto px-4 py-8">
+        {error && <div className="text-red-500">Failed to load statement: {error.message}</div>}
+        {!data && !error && <div>Loading...</div>}
+
+        {data?.success && data.data && (
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Statement: {data.data.fileName}</h1>
+                <p className="text-sm text-gray-500">Status: <span className={`font-semibold ${data.data.status === 'COMPLETED' ? 'text-green-600' : 'text-yellow-600'}`}>{data.data.status}</span></p>
+              </div>
+              <button 
+                onClick={handleReview}
+                className="btn btn-primary"
+              >
+                Review with AI
+              </button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            
+            <StatementDetails data={data.data.parsedData as any} />
+          </>
+        )}
+
+        {data && !data.success && (
+          <div className="text-red-500">Error: {data.error || 'Could not fetch statement details.'}</div>
+        )}
+      </div>
+    </DashboardLayout>
   );
-};
-
-StatementDetailPage.getLayout = (page: React.ReactElement) => (
-  <DashboardLayout title="Statement Details | Pocket Financial Advisor">{page}</DashboardLayout>
-);
-
-export default StatementDetailPage;
+}

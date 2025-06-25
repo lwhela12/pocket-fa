@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Modal from '../components/layout/Modal';
@@ -8,28 +8,72 @@ import { Statement } from '@prisma/client';
 import { fetchApi } from '../lib/api-utils';
 import { NextPageWithLayout } from './_app';
 
+const POLLING_INTERVAL = 5000; // 5 seconds
+
 const AnalyzerPage: NextPageWithLayout = () => {
   const [statements, setStatements] = useState<Statement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { openChat } = useFinancialAssistant();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchStatements = async () => {
-    setIsLoading(true);
-    const res = await fetchApi<Statement[]>('/api/statements');
-    if (res.success && res.data) {
-      setStatements(res.data);
+    // Only show initial loading spinner on first load
+    if (statements.length === 0) {
+        setIsLoading(true);
+    }
+    try {
+      const res = await fetchApi<Statement[]>('/api/statements');
+      if (res.success && res.data) {
+        setStatements(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch statements:", error);
     }
     setIsLoading(false);
   };
 
+  const handleDelete = async (stmtId: string) => {
+    if (!confirm('Are you sure you want to delete this statement?')) return;
+    const res = await fetchApi<Statement>(`/api/statements/${stmtId}`, {
+      method: 'DELETE',
+    });
+    if (res.success) {
+      fetchStatements();
+    } else {
+      alert(res.error || 'Failed to delete statement');
+    }
+  };
+
+  // Effect for polling to automatically update statement statuses
+  useEffect(() => {
+    const isProcessing = statements.some(s => s.status === 'PROCESSING');
+
+    if (isProcessing && !pollingRef.current) {
+      console.log('A statement is processing. Starting polling...');
+      pollingRef.current = setInterval(fetchStatements, POLLING_INTERVAL);
+    } else if (!isProcessing && pollingRef.current) {
+      console.log('All statements processed. Stopping polling.');
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [statements, isLoading]);
+
+  // Initial fetch
   useEffect(() => {
     fetchStatements();
   }, []);
 
-  const handleParsed = () => {
+  const handleUploadComplete = () => {
     setIsUploadModalOpen(false);
-    fetchStatements();
+    fetchStatements(); // Fetch immediately after upload to show the new statement
   };
 
   return (
@@ -38,7 +82,7 @@ const AnalyzerPage: NextPageWithLayout = () => {
         <h1 className="text-3xl font-bold">Statement Analyzer</h1>
         <div className="flex gap-2">
           {statements.length > 0 && (
-            <button className="btn" onClick={() => openChat('holistic')}>
+            <button className="btn" onClick={() => openChat('holistic', {})}>
               Overall Review
             </button>
           )}
@@ -57,19 +101,27 @@ const AnalyzerPage: NextPageWithLayout = () => {
                 <p className="font-bold">{stmt.fileName}</p>
                 <p>
                   {stmt.brokerageCompany || 'Unknown'} -{' '}
-                  <span className={`font-semibold ${stmt.status === 'COMPLETED' ? 'text-green-600' : 'text-red-600'}`}>{stmt.status}</span>
+                  <span className={`font-semibold ${stmt.status === 'COMPLETED' ? 'text-green-600' : stmt.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}`}>
+                    {stmt.status}
+                    {stmt.status === 'PROCESSING' && <span className="inline-block w-2 h-2 ml-2 bg-yellow-500 rounded-full animate-pulse"></span>}
+                  </span>
                 </p>
               </div>
               <div className="flex gap-2">
-                <Link href={`/dashboard/statements/${stmt.id}`} className="btn">View Details</Link>
-                <button onClick={() => openChat('statement', stmt.id)} className="btn btn-secondary">Review with AI</button>
+                <Link href={`/dashboard/statements/${stmt.id}`} className={`btn ${stmt.status !== 'COMPLETED' ? 'disabled' : ''}`}>View Details</Link>
+                <button 
+                  onClick={() => openChat('statement', { id: stmt.id, name: stmt.fileName })}
+                  className={`btn btn-secondary ${stmt.status !== 'COMPLETED' ? 'disabled' : ''}`}>
+                    Review with AI
+                </button>
+                <button onClick={() => handleDelete(stmt.id)} className="btn btn-error">Delete</button>
               </div>
             </div>
           ))
         )}
       </div>
       <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="Upload Statement">
-        <StatementUploadModal onClose={() => setIsUploadModalOpen(false)} onParsed={handleParsed} />
+        <StatementUploadModal onClose={() => setIsUploadModalOpen(false)} onParsed={handleUploadComplete} />
       </Modal>
     </div>
   );

@@ -1,22 +1,21 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useRef, useEffect, memo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useFinancialAssistant } from '../../lib/financial-assistant-context';
-import { fetchSSE } from '../../lib/api-utils';
-
-export type Message = { id: string; sender: 'user' | 'ai'; text: string; timestamp: Date };
-
-const INITIAL_MESSAGES: Message[] = [
-  { id: '1', sender: 'ai', text: 'Hi there! I\'m your Pocket Financial Advisor. How can I help you today?', timestamp: new Date() },
-];
+import { useFinancialAssistant, Message } from '../../lib/financial-assistant-context';
 
 const MemoizedMessage = memo(function MessageComp({ message }: { message: Message }) {
+  // Do not render the AI message bubble until it has content.
+  // The `isTyping` indicator is used to show the thinking state instead.
+  if (message.sender === 'ai' && message.text.length === 0) {
+    return null;
+  }
+
   return (
     <div className={`mb-4 flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
       <div className={`rounded-lg px-4 py-2 ${message.sender === 'user' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-800'} max-w-full`}>
         <ReactMarkdown className="prose whitespace-pre-wrap break-words text-sm">{message.text}</ReactMarkdown>
         <p className="mt-1 text-right text-xs opacity-70">
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>
@@ -24,65 +23,30 @@ const MemoizedMessage = memo(function MessageComp({ message }: { message: Messag
 });
 
 export default function ChatInterface() {
-  const { isChatOpen, closeChat, chatMode, activeStatementId, openChat } = useFinancialAssistant();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { isChatOpen, closeChat, openChat, messages, addMessage, isTyping } = useFinancialAssistant();
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
-  useEffect(() => {
-    if (!isChatOpen) {
-      setMessages(INITIAL_MESSAGES);
-      setInput('');
-    }
-  }, [isChatOpen]);
-
-  const sendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim()) return;
 
-    const userMessage: Message = { id: Date.now().toString(), sender: 'user', text: input, timestamp: new Date() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    const messageToSend = input;
     setInput('');
-    setIsTyping(true);
-
-    const aiId = (Date.now() + 1).toString();
-    setMessages(prev => [...prev, { id: aiId, sender: 'ai', text: '', timestamp: new Date() }]);
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    let acc = '';
-    await fetchSSE(
-      '/api/chat/stream',
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          message: userMessage.text,
-          history: updatedMessages.map(m => ({ sender: m.sender, text: m.text })),
-          statementId: chatMode === 'statement' ? activeStatementId : undefined,
-        }),
-      },
-      chunk => {
-        acc += chunk;
-        setMessages(prev => prev.map(m => (m.id === aiId ? { ...m, text: acc } : m)));
-      },
-    );
-    setIsTyping(false);
+    await addMessage(messageToSend);
   };
 
   return (
     <>
       <motion.button
         className="fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        onClick={() => (isChatOpen ? closeChat() : openChat('holistic'))}
+        onClick={() => (isChatOpen ? closeChat() : openChat('holistic', { name: 'holistic' }))}
         initial={{ scale: 0 }}
         animate={{ scale: 1, rotate: isChatOpen ? 45 : 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
@@ -126,7 +90,7 @@ export default function ChatInterface() {
               )}
               <div ref={messagesEndRef} />
             </div>
-            <form className="border-t border-gray-200 p-4" onSubmit={sendMessage}>
+            <form className="border-t border-gray-200 p-4" onSubmit={handleSendMessage}>
               <div className="flex rounded-lg border border-gray-300 bg-white">
                 <input
                   type="text"

@@ -27,10 +27,21 @@ export default createApiHandler<void>(async (req: NextApiRequest, res: NextApiRe
     if (statements.length === 0) {
       systemPrompt = 'You are PocketFA, a helpful financial assistant. The user has not uploaded any statements yet. Politely ask them to upload a document to get started.';
     } else {
-      const statementSummaries = statements
-        .map(s => `- A statement from ${s.brokerageCompany} (${s.fileName}) containing data like: ${JSON.stringify((s.parsedData as any)?.accounts?.[0], null, 2)}`)
-        .join('\n');
-      systemPrompt = `You are PocketFA, a financial advisor. The user has uploaded the following statements for review:\n${statementSummaries}\n\nAnswer the user's questions based on the combined information from all these documents.`;
+      // Pass the full parsed JSON for all statements so the LLM can process it directly
+      const fullPayload = statements.map(s => ({
+        fileName: s.fileName,
+        brokerageCompany: s.brokerageCompany,
+        parsedData: s.parsedData,
+      }));
+      console.log('Statements fetched for holistic review (raw):', JSON.stringify(fullPayload, null, 2));
+      const jsonBlob = JSON.stringify(fullPayload, null, 2);
+      systemPrompt = `You are PocketFA, a financial advisor. The user has uploaded the following parsed JSON data for all statements:
+
+\`\`\`json
+${jsonBlob}
+\`\`\`
+
+Answer the user's questions based on this data.`;
     }
   }
 

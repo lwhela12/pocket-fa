@@ -4,13 +4,22 @@ import { motion } from 'framer-motion';
 type AssetAllocation = {
   label: string;
   value: number;
-  color: string;
 };
 
 type AssetAllocationCardProps = {
   allocations: AssetAllocation[];
   total: number;
 };
+
+const colorMap: Record<string, string> = {
+  'Cash': '#4CAF50',
+  'Stocks': '#2196F3',
+  'Bonds': '#FFC107',
+  'Other Investments': '#9C27B0',
+  'Default': '#E0E0E0',
+};
+
+const getAllocationColor = (label: string) => colorMap[label] || colorMap['Default'];
 
 export default function AssetAllocationCard({ allocations, total }: AssetAllocationCardProps) {
   const [selectedSlice, setSelectedSlice] = useState<AssetAllocation | null>(null);
@@ -45,7 +54,7 @@ export default function AssetAllocationCard({ allocations, total }: AssetAllocat
                   key={allocation.label}
                   className="absolute inset-0 origin-center"
                   style={{
-                    backgroundColor: allocation.color,
+                    backgroundColor: getAllocationColor(allocation.label),
                     clipPath: `polygon(50% 50%, 50% 0, ${angle <= 180 ? 
                       `${50 + 50 * Math.sin(Math.PI * angle / 180)}% ${50 - 50 * Math.cos(Math.PI * angle / 180)}%` :
                       '100% 0%, 100% 100%, 0% 100%, 0% 0%'
@@ -78,7 +87,7 @@ export default function AssetAllocationCard({ allocations, total }: AssetAllocat
               <div className="mb-1 flex items-center">
                 <div 
                   className="mr-2 h-3 w-3 rounded-full" 
-                  style={{ backgroundColor: selectedSlice.color }}
+                  style={{ backgroundColor: getAllocationColor(selectedSlice.label) }}
                 />
                 <span className="font-medium">{selectedSlice.label}</span>
               </div>
@@ -105,7 +114,7 @@ export default function AssetAllocationCard({ allocations, total }: AssetAllocat
           >
             <div 
               className="mr-2 h-3 w-3 rounded-full" 
-              style={{ backgroundColor: allocation.color }}
+              style={{ backgroundColor: getAllocationColor(allocation.label) }}
             />
             <div className="text-xs">
               <p className="font-medium">{allocation.label}</p>

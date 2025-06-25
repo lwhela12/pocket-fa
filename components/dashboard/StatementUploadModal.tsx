@@ -57,7 +57,6 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
       });
       if (response.success && response.data) {
         onParsed(response.data as any);
-        openChat('statement', response.data.id);
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');
