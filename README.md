@@ -7,6 +7,8 @@ Pocket Financial Advisor is a web application that provides personalized financi
 - Financial data input (assets, debts, expenses, insurance)
 - Goal setting and tracking
 - AI-driven insights via chat interface
+- Portfolio-wide AI review of uploaded statements
+- Detailed statement page with account and position breakdown
 - Visual dashboard with financial health metrics
 - Secure authentication with multi-factor authentication
 - Statement Analyzer (PDF upload, parsing, detail view, and AI review) — see [docs/STATEMENT_ANALYZER.md](docs/STATEMENT_ANALYZER.md)
