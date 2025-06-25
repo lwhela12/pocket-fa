@@ -34,11 +34,18 @@ const AnalyzerPage: NextPageWithLayout = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Statement Analyzer</h1>
-        <button className="btn btn-primary" onClick={() => setIsUploadModalOpen(true)}>
-          Upload Statement
-        </button>
+        <div className="flex gap-2">
+          {statements.length > 0 && (
+            <button className="btn" onClick={() => openChat('holistic')}>
+              Overall Review
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setIsUploadModalOpen(true)}>
+            Upload Statement
+          </button>
+        </div>
       </div>
       <div className="space-y-4">
         {isLoading ? (

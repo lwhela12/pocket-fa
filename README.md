@@ -7,6 +7,8 @@ Pocket Financial Advisor is a web application that provides personalized financi
 - Financial data input (assets, debts, expenses, insurance)
 - Goal setting and tracking
 - AI-driven insights via chat interface
+- Portfolio-wide AI review of uploaded statements
+- Detailed statement page with account and position breakdown
 - Visual dashboard with financial health metrics
 - Secure authentication with multi-factor authentication
 - PDF statement upload with Gemini's vision capabilities (supports large files via the File API)
