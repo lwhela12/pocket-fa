@@ -38,7 +38,7 @@ export default createApiHandler<LoginResponse>(async (
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    // Verify password
+    // Verify password using argon2
     const isPasswordValid = await argon2.verify(user.password, password);
 
     if (!isPasswordValid) {

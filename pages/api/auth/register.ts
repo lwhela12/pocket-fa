@@ -40,7 +40,7 @@ export default createApiHandler<RegisterResponse>(async (
       return res.status(400).json({ success: false, error: 'User with this email already exists' });
     }
 
-    // Hash password
+    // Hash password using argon2 (salt handled automatically)
     const hashedPassword = await argon2.hash(password);
 
     // Create user

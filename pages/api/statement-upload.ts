@@ -5,9 +5,47 @@ import fs from 'fs';
 import path from 'path';
 import prisma from '../../lib/prisma';
 import { Statement } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
-// --- TYPE DEFINITIONS (from previous step) ---
-export interface StatementSummary { /* ... existing interface ... */ }
+// --- Start of New Type Definitions ---
+export interface Holding {
+  symbol: string | null;
+  description: string;
+  quantity: number;
+  price: number;
+  value: number;
+}
+
+export interface Account {
+  account_name: string;
+  account_number: string;
+  account_holder: string;
+  total_value: number;
+  holdings: Holding[];
+}
+
+export interface InsuranceAccount {
+  policy_name: string;
+  total_value: number;
+}
+
+export interface StatementSummary {
+  brokerageCompany: string;
+  statementDate: string;
+  qualitativeSummary: string;
+  overall_investment_summary: {
+    beginning_value: number;
+    ending_value: number;
+    change_in_value: number;
+    asset_allocation: {
+      [key: string]: { value: number; percentage: number };
+    };
+  } | null;
+  personal_investment_accounts: Account[];
+  retirement_investment_accounts_tax_qualified: Account[];
+  insurance_accounts: InsuranceAccount[];
+}
+// --- End of New Type Definitions ---
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -136,44 +174,27 @@ export default createApiHandler<Statement>(async (req: NextApiRequest, res: Next
     return res.status(400).json({ success: false, error: 'Only PDF files are allowed' });
   }
 
-  // Create the record with PROCESSING status right away
+  const statementId = randomUUID();
+  const destPath = path.join('/tmp', `${statementId}.pdf`);
+  const buffer = Buffer.from(file, 'base64');
+  await fs.promises.writeFile(destPath, buffer);
+
   const statementRecord = await prisma.statement.create({
-    data: { userId, fileName: filename, filePath: '', status: 'PROCESSING' },
+    data: {
+      id: statementId,
+      userId,
+      fileName: filename,
+      filePath: destPath,
+      status: 'PROCESSING',
+    },
   });
 
-  const tempPath = path.join('/tmp', `${statementRecord.id}.pdf`);
-  const buffer = Buffer.from(file, 'base64');
-
   try {
-    await fs.promises.writeFile(tempPath, buffer);
-    const publicDir = path.join(process.cwd(), 'public', 'statements');
-    await fs.promises.mkdir(publicDir, { recursive: true });
-    const publicPath = `/statements/${statementRecord.id}.pdf`;
-    const destPath = path.join(publicDir, `${statementRecord.id}.pdf`);
-    await fs.promises.copyFile(tempPath, destPath);
-
-    // Update the path and immediately respond to the user
-    await prisma.statement.update({
-      where: { id: statementRecord.id },
-      data: { filePath: publicPath },
-    });
-
-    // Respond immediately with a 202 Accepted status
     res.status(202).json({ success: true, data: statementRecord });
-
-    // Start the background processing AFTER responding
     processStatementInBackground(statementRecord.id, destPath);
-
   } catch (error: any) {
-    // If initial file handling fails, mark as FAILED
-    await prisma.statement.update({
-      where: { id: statementRecord.id },
-      data: { status: 'FAILED', error: `File handling failed: ${error.message}` },
-    });
+    fs.promises.unlink(destPath).catch(() => {});
     console.error('Statement upload file handling error:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  } finally {
-    // Clean up the temp file, but don't block for it
-    fs.promises.unlink(tempPath).catch(() => {});
+    return res.status(500).json({ success: false, error: 'Could not process the uploaded file.' });
   }
 });

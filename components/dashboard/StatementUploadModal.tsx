@@ -4,13 +4,6 @@ import { fetchApi } from '../../lib/api-utils';
 import { useFinancialAssistant } from '../../lib/financial-assistant-context';
 import { Statement } from '@prisma/client';
 
-export interface StatementSummary {
-  brokerageCompany: string;
-  accountCount: number;
-  accounts: any[];
-  qualitativeSummary: string;
-}
-
 interface Props {
   onClose: () => void;
   onParsed?: (data: Statement) => void;
@@ -56,7 +49,7 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
         body: JSON.stringify({ filename: file.name, file: base64 }),
       });
       if (response.success && response.data) {
-        onParsed(response.data as any);
+        onParsed?.(response.data as any);
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');
@@ -95,4 +88,3 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
 };
 
 export default StatementUploadModal;
-export type { StatementSummary };
