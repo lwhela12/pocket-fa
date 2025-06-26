@@ -51,6 +51,7 @@ model Statement {
   filePath         String   @unique
   brokerageCompany String?
   parsedData       Json?
+  totalFees        Float?
   status           String   @default("PROCESSING")
   error            String?
   createdAt        DateTime @default(now())

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Modal from '../components/layout/Modal';
@@ -8,14 +8,12 @@ import { Statement } from '@prisma/client';
 import { fetchApi } from '../lib/api-utils';
 import { NextPageWithLayout } from './_app';
 
-const POLLING_INTERVAL = 5000; // 5 seconds
 
 const AnalyzerPage: NextPageWithLayout = () => {
   const [statements, setStatements] = useState<Statement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { openChat } = useFinancialAssistant();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchStatements = async () => {
     // Only show initial loading spinner on first load
@@ -45,26 +43,27 @@ const AnalyzerPage: NextPageWithLayout = () => {
     }
   };
 
-  // Effect for polling to automatically update statement statuses
+  // Subscribe to server-sent events for real-time status updates
   useEffect(() => {
-    const isProcessing = statements.some(s => s.status === 'PROCESSING');
+    const eventSource = new EventSource('/api/statements/status');
 
-    if (isProcessing && !pollingRef.current) {
-      console.log('A statement is processing. Starting polling...');
-      pollingRef.current = setInterval(fetchStatements, POLLING_INTERVAL);
-    } else if (!isProcessing && pollingRef.current) {
-      console.log('All statements processed. Stopping polling.');
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
+    eventSource.onmessage = event => {
+      const data = JSON.parse(event.data);
+      setStatements(prevStatements =>
+        prevStatements.map(stmt =>
+          stmt.id === data.statementId ? { ...stmt, status: data.status } : stmt
+        )
+      );
     };
-  }, [statements, isLoading]);
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   // Initial fetch
   useEffect(() => {

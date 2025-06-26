@@ -2,11 +2,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
+import { useFinancialAssistant } from '../../lib/financial-assistant-context';
 
 export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { toggleChatPanel, isChatPanelVisible } = useFinancialAssistant();
 
   const handleLogout = () => {
     logout();
@@ -46,6 +48,13 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            <button
+              type="button"
+              onClick={toggleChatPanel}
+              className="mr-4 text-gray-500 hover:text-gray-700"
+            >
+              {isChatPanelVisible ? 'Hide Chat' : 'Show Chat'}
+            </button>
             <div className="relative ml-3">
               <div>
                 <button
@@ -142,6 +151,12 @@ export default function Navbar() {
           >
             Statement Analyzer
           </Link>
+          <button
+            onClick={toggleChatPanel}
+            className="block w-full text-left border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+          >
+            {isChatPanelVisible ? 'Hide Chat' : 'Show Chat'}
+          </button>
         </div>
         <div className="border-t border-gray-200 pt-4 pb-3">
           <div className="flex items-center px-4">

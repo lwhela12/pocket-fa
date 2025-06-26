@@ -8,20 +8,20 @@ const getInitialMessage = (text?: string): Message[] => [
 ];
 
 interface FinancialAssistantState {
-  isChatOpen: boolean;
+  isChatPanelVisible: boolean;
   isTyping: boolean;
   chatMode: 'holistic' | 'statement';
   activeStatementId: string | null;
   messages: Message[];
   openChat: (mode: 'holistic' | 'statement', context: { id?: string; name?: string }) => void;
-  closeChat: () => void;
+  toggleChatPanel: () => void;
   addMessage: (text: string) => Promise<void>;
 }
 
 const FinancialAssistantContext = createContext<FinancialAssistantState | null>(null);
 
 export function FinancialAssistantProvider({ children }: { children: ReactNode }) {
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatPanelVisible, setIsChatPanelVisible] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [chatMode, setChatMode] = useState<'holistic' | 'statement'>('holistic');
   const [activeStatementId, setActiveStatementId] = useState<string | null>(null);
@@ -39,11 +39,11 @@ export function FinancialAssistantProvider({ children }: { children: ReactNode }
     }
     setMessages(getInitialMessage(introText));
 
-    setIsChatOpen(true);
+    setIsChatPanelVisible(true);
   };
 
-  const closeChat = () => {
-    setIsChatOpen(false);
+  const toggleChatPanel = () => {
+    setIsChatPanelVisible(prev => !prev);
   };
 
   const addMessage = async (text: string) => {
@@ -78,7 +78,7 @@ export function FinancialAssistantProvider({ children }: { children: ReactNode }
     setIsTyping(false);
   };
 
-  const value = { isChatOpen, isTyping, chatMode, activeStatementId, messages, openChat, closeChat, addMessage };
+  const value = { isChatPanelVisible, isTyping, chatMode, activeStatementId, messages, openChat, toggleChatPanel, addMessage };
 
   return (
     <FinancialAssistantContext.Provider value={value}>
