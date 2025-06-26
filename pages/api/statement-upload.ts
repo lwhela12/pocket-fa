@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import prisma from '../../lib/prisma';
 import { Statement } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 // --- Start of New Type Definitions ---
 export interface Holding {
@@ -173,45 +174,27 @@ export default createApiHandler<Statement>(async (req: NextApiRequest, res: Next
     return res.status(400).json({ success: false, error: 'Only PDF files are allowed' });
   }
 
-  // Create the record with PROCESSING status right away
+  const statementId = randomUUID();
+  const destPath = path.join('/tmp', `${statementId}.pdf`);
+  const buffer = Buffer.from(file, 'base64');
+  await fs.promises.writeFile(destPath, buffer);
+
   const statementRecord = await prisma.statement.create({
-    data: { userId, fileName: filename, filePath: '', status: 'PROCESSING' },
+    data: {
+      id: statementId,
+      userId,
+      fileName: filename,
+      filePath: destPath,
+      status: 'PROCESSING',
+    },
   });
 
-  const tempPath = path.join('/tmp', `${statementRecord.id}.pdf`);
-  const buffer = Buffer.from(file, 'base64');
-
   try {
-    await fs.promises.writeFile(tempPath, buffer);
-    const publicDir = path.join('/tmp', 'statements');
-    await fs.promises.mkdir(publicDir, { recursive: true });
-    const destPath = path.join(publicDir, `${statementRecord.id}.pdf`);
-    await fs.promises.copyFile(tempPath, destPath);
-
-    const publicPath = destPath;
-
-    // Update the path and immediately respond to the user
-    await prisma.statement.update({
-      where: { id: statementRecord.id },
-      data: { filePath: publicPath },
-    });
-
-    // Respond immediately with a 202 Accepted status
     res.status(202).json({ success: true, data: statementRecord });
-
-    // Start the background processing AFTER responding
     processStatementInBackground(statementRecord.id, destPath);
-
   } catch (error: any) {
-    // If initial file handling fails, mark as FAILED
-    await prisma.statement.update({
-      where: { id: statementRecord.id },
-      data: { status: 'FAILED', error: `File handling failed: ${error.message}` },
-    });
+    fs.promises.unlink(destPath).catch(() => {});
     console.error('Statement upload file handling error:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  } finally {
-    // Clean up the temp file, but don't block for it
-    fs.promises.unlink(tempPath).catch(() => {});
+    return res.status(500).json({ success: false, error: 'Could not process the uploaded file.' });
   }
 });

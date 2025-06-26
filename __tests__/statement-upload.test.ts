@@ -5,8 +5,8 @@ jest.mock('../lib/prisma', () => ({
   __esModule: true,
   default: {
     statement: {
-      create: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: null, parsedData: null, status: 'PROCESSING', error: null, createdAt: new Date(), updatedAt: new Date() }),
-      update: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: 'Test', parsedData: { brokerageCompany: 'Test', accountCount: 1, accounts: [], qualitativeSummary: 'ok' }, status: 'COMPLETED', error: null, createdAt: new Date(), updatedAt: new Date() }),
+      create: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '/tmp/1.pdf', brokerageCompany: null, parsedData: null, status: 'PROCESSING', error: null, createdAt: new Date(), updatedAt: new Date() }),
+      update: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '/tmp/1.pdf', brokerageCompany: 'Test', parsedData: { brokerageCompany: 'Test', accountCount: 1, accounts: [], qualitativeSummary: 'ok' }, status: 'COMPLETED', error: null, createdAt: new Date(), updatedAt: new Date() }),
     },
   },
 }));
