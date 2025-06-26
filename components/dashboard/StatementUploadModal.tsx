@@ -49,7 +49,7 @@ const StatementUploadModal = ({ onClose, onParsed }: Props) => {
         body: JSON.stringify({ filename: file.name, file: base64 }),
       });
       if (response.success && response.data) {
-        onParsed(response.data as any);
+        onParsed?.(response.data as any);
         onClose();
       } else {
         setError(response.error || 'Failed to process statement');
