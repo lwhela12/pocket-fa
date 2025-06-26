@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import * as argon2 from 'argon2-browser';
+import * as argon2 from 'argon2';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
-import { ensureArgon2Wasm } from '../../../lib/argon2-wasm';
 
 type LoginResponse = {
   user: {
@@ -39,14 +38,8 @@ export default createApiHandler<LoginResponse>(async (
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    // Ensure the WASM loader is set for argon2-browser
-    await ensureArgon2Wasm();
-
-    // Verify password using the stored hash
-    const isPasswordValid = await argon2.verify({
-      pass: password,
-      hash: user.password,
-    });
+    // Verify password using argon2
+    const isPasswordValid = await argon2.verify(user.password, password);
 
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
