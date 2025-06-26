@@ -41,7 +41,7 @@ export default createApiHandler<LoginResponse>(async (
     // Verify password
     const isPasswordValid = await argon2.verify({
       pass: password,
-      hash: user.password,
+      encoded: user.password,
     });
 
     if (!isPasswordValid) {
