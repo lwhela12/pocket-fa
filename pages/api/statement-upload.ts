@@ -183,11 +183,12 @@ export default createApiHandler<Statement>(async (req: NextApiRequest, res: Next
 
   try {
     await fs.promises.writeFile(tempPath, buffer);
-    const publicDir = path.join(process.cwd(), 'public', 'statements');
+    const publicDir = path.join('/tmp', 'statements');
     await fs.promises.mkdir(publicDir, { recursive: true });
-    const publicPath = `/statements/${statementRecord.id}.pdf`;
     const destPath = path.join(publicDir, `${statementRecord.id}.pdf`);
     await fs.promises.copyFile(tempPath, destPath);
+
+    const publicPath = destPath;
 
     // Update the path and immediately respond to the user
     await prisma.statement.update({

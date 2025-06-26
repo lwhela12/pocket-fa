@@ -38,7 +38,7 @@ export default function ProfileSetup() {
         throw new Error(response.error || 'Profile setup failed');
       }
 
-      router.push('/dashboard');
+      router.push('/analyzer');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Profile setup failed. Please try again.');
       setIsLoading(false);

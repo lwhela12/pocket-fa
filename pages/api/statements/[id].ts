@@ -19,8 +19,9 @@ export default createApiHandler<Statement>(async (req: NextApiRequest, res: Next
       return res.status(404).json({ success: false, error: 'Statement not found' });
     }
     await prisma.statement.delete({ where: { id } });
-    const filePath = path.join(process.cwd(), 'public', 'statements', `${id}.pdf`);
-    fs.promises.unlink(filePath).catch(() => {});
+    if (toDelete.filePath) {
+      fs.promises.unlink(toDelete.filePath).catch(() => {});
+    }
     return res.status(200).json({ success: true, data: toDelete });
   }
 
