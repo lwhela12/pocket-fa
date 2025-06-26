@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import StatementDetails from '../../../components/dashboard/StatementDetails';
 import { Statement } from '@prisma/client';
+import { StatementSummary } from '../../api/statement-upload';
 import { fetchApi } from '../../../lib/api-utils'; // Import the correct fetcher
 
 // Use the project-specific fetchApi utility for SWR
@@ -45,7 +46,7 @@ export default function StatementDetailPage() {
               </button>
             </div>
             
-            <StatementDetails data={data.data.parsedData as any} />
+            <StatementDetails data={data.data.parsedData as StatementSummary} />
           </>
         )}
 

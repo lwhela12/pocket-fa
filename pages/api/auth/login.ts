@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import * as argon2 from 'argon2';
+import * as argon2 from 'argon2-browser';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
@@ -39,7 +39,10 @@ export default createApiHandler<LoginResponse>(async (
     }
 
     // Verify password
-    const isPasswordValid = await argon2.verify(user.password, password);
+    const isPasswordValid = await argon2.verify({
+      pass: password,
+      hash: user.password,
+    });
 
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });

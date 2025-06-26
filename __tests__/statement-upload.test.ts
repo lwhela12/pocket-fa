@@ -5,7 +5,7 @@ jest.mock('../lib/prisma', () => ({
   __esModule: true,
   default: {
     statement: {
-      create: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: null, parsedData: null, status: 'UPLOADING', error: null, createdAt: new Date(), updatedAt: new Date() }),
+      create: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: null, parsedData: null, status: 'PROCESSING', error: null, createdAt: new Date(), updatedAt: new Date() }),
       update: jest.fn().mockResolvedValue({ id: '1', userId: '123', fileName: 'statement.pdf', filePath: '', brokerageCompany: 'Test', parsedData: { brokerageCompany: 'Test', accountCount: 1, accounts: [], qualitativeSummary: 'ok' }, status: 'COMPLETED', error: null, createdAt: new Date(), updatedAt: new Date() }),
     },
   },
@@ -76,21 +76,15 @@ describe('statement-upload', () => {
   });
 
 
-  it('parses PDF and returns parsed statement', async () => {
+  it('accepts PDF for processing and returns a processing statement', async () => {
     const { req, res } = createMocks();
     req.method = 'POST';
     req.body = { file: Buffer.from('%PDF-1.4...').toString('base64'), filename: 'statement.pdf' };
     await (handler as any)(req, res);
     expect(require('fs').promises.writeFile).toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.status).toHaveBeenCalledWith(202);
     const json = res.json.mock.calls[0][0];
     expect(json.success).toBe(true);
-    expect(json.data.brokerageCompany).toBe('Test');
-    expect(json.data.parsedData).toEqual({
-      brokerageCompany: 'Test',
-      accountCount: 1,
-      accounts: [],
-      qualitativeSummary: 'ok',
-    });
+    expect(json.data.status).toBe('PROCESSING');
   });
 });

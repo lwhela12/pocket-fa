@@ -6,8 +6,45 @@ import path from 'path';
 import prisma from '../../lib/prisma';
 import { Statement } from '@prisma/client';
 
-// --- TYPE DEFINITIONS (from previous step) ---
-export interface StatementSummary { /* ... existing interface ... */ }
+// --- Start of New Type Definitions ---
+export interface Holding {
+  symbol: string | null;
+  description: string;
+  quantity: number;
+  price: number;
+  value: number;
+}
+
+export interface Account {
+  account_name: string;
+  account_number: string;
+  account_holder: string;
+  total_value: number;
+  holdings: Holding[];
+}
+
+export interface InsuranceAccount {
+  policy_name: string;
+  total_value: number;
+}
+
+export interface StatementSummary {
+  brokerageCompany: string;
+  statementDate: string;
+  qualitativeSummary: string;
+  overall_investment_summary: {
+    beginning_value: number;
+    ending_value: number;
+    change_in_value: number;
+    asset_allocation: {
+      [key: string]: { value: number; percentage: number };
+    };
+  } | null;
+  personal_investment_accounts: Account[];
+  retirement_investment_accounts_tax_qualified: Account[];
+  insurance_accounts: InsuranceAccount[];
+}
+// --- End of New Type Definitions ---
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
