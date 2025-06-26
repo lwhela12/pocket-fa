@@ -1,6 +1,5 @@
 import { useRef, useEffect, memo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useFinancialAssistant, Message } from '../../lib/financial-assistant-context';
 
 const MemoizedMessage = memo(function MessageComp({ message }: { message: Message }) {
@@ -23,13 +22,22 @@ const MemoizedMessage = memo(function MessageComp({ message }: { message: Messag
 });
 
 export default function ChatInterface() {
-  const { isChatOpen, closeChat, openChat, messages, addMessage, isTyping } = useFinancialAssistant();
+  const { toggleChatPanel, messages, addMessage, isTyping } = useFinancialAssistant();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].sender === 'ai') {
+      setShowSuggestions(true);
+    } else if (messages.some(m => m.sender === 'user')) {
+      setShowSuggestions(false);
     }
   }, [messages]);
 
@@ -39,74 +47,73 @@ export default function ChatInterface() {
 
     const messageToSend = input;
     setInput('');
+    setShowSuggestions(false);
     await addMessage(messageToSend);
   };
 
-  return (
-    <>
-      <motion.button
-        className="fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        onClick={() => (isChatOpen ? closeChat() : openChat('holistic', { name: 'holistic' }))}
-        initial={{ scale: 0 }}
-        animate={{ scale: 1, rotate: isChatOpen ? 45 : 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          {isChatOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          )}
-        </svg>
-      </motion.button>
+  const suggestedQuestions = [
+    'Am I on track for retirement?',
+    'How can I reduce my fees?',
+    'What questions should I ask my financial advisor?',
+    'Explain my asset allocation.'
+  ];
 
-      <AnimatePresence>
-        {isChatOpen && (
-          <motion.div
-            className="fixed bottom-24 right-6 z-10 flex h-[500px] w-[350px] flex-col rounded-lg bg-white shadow-xl"
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          >
-            <div className="border-b border-gray-200 bg-primary px-4 py-3 text-white flex justify-between items-center">
-              <h3 className="text-lg font-medium">Financial Assistant</h3>
-              <button onClick={closeChat} className="text-white">x</button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {messages.map(m => (
-                <MemoizedMessage key={m.id} message={m} />
-              ))}
-              {isTyping && (
-                <div className="mb-4 flex justify-start">
-                  <div className="rounded-lg bg-gray-200 px-4 py-2 text-gray-800">
-                    <div className="flex space-x-1">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-gray-500" />
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-gray-500" style={{ animationDelay: '0.2s' }} />
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-gray-500" style={{ animationDelay: '0.4s' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            <form className="border-t border-gray-200 p-4" onSubmit={handleSendMessage}>
-              <div className="flex rounded-lg border border-gray-300 bg-white">
-                <input
-                  type="text"
-                  placeholder="Type your message..."
-                  className="flex-1 rounded-l-lg border-0 px-3 py-2 focus:outline-none focus:ring-0"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                />
-                <button type="submit" className="rounded-r-lg bg-primary px-4 py-2 text-white transition-colors hover:bg-blue-600 disabled:opacity-50" disabled={!input.trim()}>
-                  Send
-                </button>
+  return (
+    <div className="flex h-full max-h-[calc(100vh-7rem)] flex-col">
+      <div className="border-b border-gray-200 bg-primary px-4 py-3 text-white flex justify-between items-center">
+        <h3 className="text-lg font-medium">Financial Assistant</h3>
+        <button onClick={toggleChatPanel} className="text-white">x</button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
+        {messages.map(m => (
+          <MemoizedMessage key={m.id} message={m} />
+        ))}
+        {isTyping && (
+          <div className="mb-4 flex justify-start">
+            <div className="rounded-lg bg-gray-200 px-4 py-2 text-gray-800">
+              <div className="flex space-x-1">
+                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-500" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-500" style={{ animationDelay: '0.2s' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-500" style={{ animationDelay: '0.4s' }} />
               </div>
-            </form>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
-    </>
+        <div ref={messagesEndRef} />
+      </div>
+      {showSuggestions && (
+        <div className="p-4 border-t">
+          <p className="text-xs text-gray-500 mb-2">Suggestions</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map(q => (
+              <button
+                key={q}
+                className="btn text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => {
+                  setShowSuggestions(false);
+                  addMessage(q);
+                }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <form className="border-t border-gray-200 p-4" onSubmit={handleSendMessage}>
+        <div className="flex rounded-lg border border-gray-300 bg-white">
+          <input
+            type="text"
+            placeholder="Type your message..."
+            className="flex-1 rounded-l-lg border-0 px-3 py-2 focus:outline-none focus:ring-0"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+          />
+          <button type="submit" className="rounded-r-lg bg-primary px-4 py-2 text-white transition-colors hover:bg-blue-600 disabled:opacity-50" disabled={!input.trim()}>
+            Send
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

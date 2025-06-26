@@ -6,6 +6,7 @@ import path from 'path';
 import prisma from '../../lib/prisma';
 import { Statement } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import statementStatusEmitter from '../../lib/events';
 
 // --- Start of New Type Definitions ---
 export interface Holding {
@@ -44,6 +45,12 @@ export interface StatementSummary {
   personal_investment_accounts: Account[];
   retirement_investment_accounts_tax_qualified: Account[];
   insurance_accounts: InsuranceAccount[];
+  fees_summary?: {
+    total_fees: number;
+    management_fees: number | null;
+    transaction_fees: number | null;
+    fees_commentary: string | null;
+  };
 }
 // --- End of New Type Definitions ---
 
@@ -87,8 +94,10 @@ async function processStatementInBackground(statementId: string, filePath: strin
         status: 'COMPLETED',
         brokerageCompany: parsedData.brokerageCompany,
         parsedData: parsedData as any,
+        totalFees: (parsedData as any)?.fees_summary?.total_fees || 0,
       },
     });
+    statementStatusEmitter.emit('statusUpdate', { statementId, status: 'COMPLETED' });
     console.log(`[Background] Successfully processed statement: ${statementId}`);
   } catch (error: any) {
     console.error(`[Background] Error processing statement ${statementId}:`, error);
@@ -96,6 +105,7 @@ async function processStatementInBackground(statementId: string, filePath: strin
       where: { id: statementId },
       data: { status: 'FAILED', error: error.message },
     });
+    statementStatusEmitter.emit('statusUpdate', { statementId, status: 'FAILED' });
   } finally {
     try {
       await fs.promises.unlink(filePath);
@@ -153,7 +163,13 @@ async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
         ],
         "insurance_accounts": [
           // A simplified structure for insurance policies
-        ]
+        ],
+        "fees_summary": {
+          "total_fees": "number",
+          "management_fees": "number | null",
+          "transaction_fees": "number | null",
+          "fees_commentary": "string | null (A brief note if fees are not visible but are likely to exist)"
+        }
       }
   
       **Instructions:**
@@ -162,6 +178,8 @@ async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
       3.  **qualitativeSummary**: Always provide a helpful, concise summary.
       4.  If the statement is very simple (e.g., a bank statement with no investments), populate the top-level fields and leave the account arrays empty.
       5.  IMPORTANT: For privacy, redact all personal names and use only the last 4 digits of any account numbers in the final JSON output. The "account_holder" field should be omitted.
+      You MUST carefully scan the document for any mention of fees, including management fees, administrative fees, or transaction costs. Sum them up and populate the \`fees_summary\` object. If no fees are found, return 0 for \`total_fees\`.
+      CRITICAL: If \`total_fees\` is 0, check the account types. If the statement includes a 401k, mutual funds, annuities, or insurance products, you MUST populate the \`fees_commentary\` field with a note such as: 'No fees were explicitly listed on this statement, but products like 401(k)s, mutual funds, or annuities typically have underlying fees (e.g., expense ratios, administrative fees) that may not be detailed here.' If it's a simple checking/savings account, this field can be null.
 
       Now, process the attached PDF and provide ONLY the JSON output.
     `;

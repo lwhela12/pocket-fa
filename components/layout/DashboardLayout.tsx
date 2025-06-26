@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Navbar from './Navbar';
 import { useAuth } from '../../hooks/useAuth';
 import ChatInterface from '../dashboard/ChatInterface';
+import { useFinancialAssistant } from '../../lib/financial-assistant-context';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -15,6 +16,7 @@ export default function DashboardLayout({
   title = 'Dashboard | Pocket Financial Advisor',
 }: DashboardLayoutProps) {
   const { user, loading } = useAuth();
+  const { isChatPanelVisible } = useFinancialAssistant();
   const router = useRouter();
 
   useEffect(() => {
@@ -46,13 +48,16 @@ export default function DashboardLayout({
 
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        
-        <main className="py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {children}
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
+          <main>{children}</main>
+          <div
+            className={`${isChatPanelVisible ? 'block' : 'hidden'} h-[calc(100vh-7rem)] overflow-y-auto`}
+          >
+            <ChatInterface />
           </div>
-        </main>
-        
+        </div>
+
         <footer className="border-t border-gray-200 bg-white py-6">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <p className="text-center text-sm text-gray-500">
@@ -60,7 +65,6 @@ export default function DashboardLayout({
             </p>
           </div>
         </footer>
-        <ChatInterface />
       </div>
     </>
   );
