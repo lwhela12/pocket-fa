@@ -85,11 +85,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const { user: userData, token, refreshToken } = data.data;
-      
-      setUser(userData);
-      
+
+      let combinedUser = userData;
+
+      if (token) {
+        try {
+          const profRes = await fetch('/api/profile', {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const prof = await profRes.json();
+          if (prof.success) {
+            combinedUser = { ...userData, ...prof.data };
+          }
+        } catch (e) {
+          console.error('Failed to fetch profile after login', e);
+        }
+      }
+
+      setUser(combinedUser);
+
       if (typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(combinedUser));
         localStorage.setItem('token', token);
         if (refreshToken) {
           localStorage.setItem('refreshToken', refreshToken);
@@ -134,11 +153,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const { user: userData, token } = data.data;
-      
-      setUser(userData);
-      
+
+      let combinedUser = userData;
+
+      if (token) {
+        try {
+          const profRes = await fetch('/api/profile', {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const prof = await profRes.json();
+          if (prof.success) {
+            combinedUser = { ...userData, ...prof.data };
+          }
+        } catch (e) {
+          console.error('Failed to fetch profile after registration', e);
+        }
+      }
+
+      setUser(combinedUser);
+
       if (typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(combinedUser));
         if (token) {
           localStorage.setItem('token', token);
         }
@@ -157,9 +195,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (data: Partial<User>) => {
     setLoading(true);
     try {
-      // In a real app, this would call an API
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Profile update failed');
+      }
+
       if (user) {
-        const updatedUser = { ...user, ...data };
+        const updatedUser = { ...user, ...result.data };
         setUser(updatedUser);
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(updatedUser));

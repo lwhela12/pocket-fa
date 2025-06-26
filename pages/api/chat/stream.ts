@@ -11,6 +11,7 @@ export default createApiHandler<void>(async (req: NextApiRequest, res: NextApiRe
   const userId = await authenticate(req);
   const { message, history = [], statementId } = req.body as { message: string; history?: any[]; statementId?: string };
 
+  const profilePromise = prisma.profile.findUnique({ where: { userId } });
   let systemPrompt: string;
 
   if (statementId) {
@@ -27,7 +28,6 @@ export default createApiHandler<void>(async (req: NextApiRequest, res: NextApiRe
     if (statements.length === 0) {
       systemPrompt = 'You are PocketFA, a helpful financial assistant. The user has not uploaded any statements yet. Politely ask them to upload a document to get started.';
     } else {
-      // Pass the full parsed JSON for all statements so the LLM can process it directly
       const fullPayload = statements.map(s => ({
         fileName: s.fileName,
         brokerageCompany: s.brokerageCompany,
@@ -43,6 +43,12 @@ ${jsonBlob}
 
 Answer the user's questions based on this data.`;
     }
+  }
+
+  const profile = await profilePromise;
+  if (profile) {
+    const details = `The user is ${profile.age ?? 'unknown age'} years old, plans to retire at ${profile.retirementAge ?? 'an unknown age'}, and has a '${profile.riskTolerance ?? 'Moderate'}' risk tolerance.`;
+    systemPrompt = `${details}\n\n${systemPrompt}`;
   }
 
   const aiHistory = history.map(msg => ({
