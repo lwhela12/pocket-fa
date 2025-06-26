@@ -3,7 +3,7 @@ import * as argon2 from 'argon2-browser';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
-import { getArgon2Wasm } from '../../../lib/argon2-wasm';
+import { ensureArgon2Wasm } from '../../../lib/argon2-wasm';
 
 type LoginResponse = {
   user: {
@@ -39,14 +39,13 @@ export default createApiHandler<LoginResponse>(async (
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    // Load the WASM module for argon2-browser
-    const wasm = await getArgon2Wasm();
+    // Ensure the WASM loader is set for argon2-browser
+    await ensureArgon2Wasm();
 
     // Verify password using the stored hash
     const isPasswordValid = await argon2.verify({
       pass: password,
       hash: user.password,
-      wasm,
     });
 
     if (!isPasswordValid) {
