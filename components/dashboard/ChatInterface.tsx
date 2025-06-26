@@ -25,10 +25,19 @@ export default function ChatInterface() {
   const { toggleChatPanel, messages, addMessage, isTyping } = useFinancialAssistant();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].sender === 'ai') {
+      setShowSuggestions(true);
+    } else if (messages.some(m => m.sender === 'user')) {
+      setShowSuggestions(false);
     }
   }, [messages]);
 
@@ -38,6 +47,7 @@ export default function ChatInterface() {
 
     const messageToSend = input;
     setInput('');
+    setShowSuggestions(false);
     await addMessage(messageToSend);
   };
 
@@ -49,7 +59,7 @@ export default function ChatInterface() {
   ];
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full max-h-[calc(100vh-7rem)] flex-col">
       <div className="border-b border-gray-200 bg-primary px-4 py-3 text-white flex justify-between items-center">
         <h3 className="text-lg font-medium">Financial Assistant</h3>
         <button onClick={toggleChatPanel} className="text-white">x</button>
@@ -71,20 +81,25 @@ export default function ChatInterface() {
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-4 border-t">
-        <p className="text-xs text-gray-500 mb-2">Suggestions</p>
-        <div className="flex flex-wrap gap-2">
-          {suggestedQuestions.map(q => (
-            <button
-              key={q}
-              className="btn text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
-              onClick={() => addMessage(q)}
-            >
-              {q}
-            </button>
-          ))}
+      {showSuggestions && (
+        <div className="p-4 border-t">
+          <p className="text-xs text-gray-500 mb-2">Suggestions</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map(q => (
+              <button
+                key={q}
+                className="btn text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => {
+                  setShowSuggestions(false);
+                  addMessage(q);
+                }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <form className="border-t border-gray-200 p-4" onSubmit={handleSendMessage}>
         <div className="flex rounded-lg border border-gray-300 bg-white">
           <input
