@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import * as argon2 from 'argon2-browser';
+import argon2 from '../../../lib/argon2';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
@@ -48,7 +48,7 @@ export default createApiHandler<RegisterResponse>(async (
         salt: salt,
         type: argon2.ArgonType.Argon2id,
     });
-    const hashedPassword = hashResult.hashHex;
+    const hashedPassword = hashResult.encoded;
 
     // Create user
     const user = await prisma.user.create({
