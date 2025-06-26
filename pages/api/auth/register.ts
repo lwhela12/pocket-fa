@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import argon2 from '../../../lib/argon2';
+import * as argon2 from 'argon2-browser';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
 import prisma from '../../../lib/prisma';
 import { randomBytes } from 'crypto';
+import { getArgon2Wasm } from '../../../lib/argon2-wasm';
 
 type RegisterResponse = {
   user: {
@@ -41,14 +42,18 @@ export default createApiHandler<RegisterResponse>(async (
       return res.status(400).json({ success: false, error: 'User with this email already exists' });
     }
 
+    // Load the WASM module for argon2-browser
+    const wasm = await getArgon2Wasm();
+
     // Hash password using argon2-browser with a random salt
     const salt = randomBytes(16);
     const hashResult = await argon2.hash({
         pass: password,
         salt: salt,
         type: argon2.ArgonType.Argon2id,
+        wasm,
     });
-    const hashedPassword = hashResult.encoded;
+    const hashedPassword = hashResult.hashHex;
 
     // Create user
     const user = await prisma.user.create({
