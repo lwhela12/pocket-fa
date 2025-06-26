@@ -47,6 +47,30 @@ export interface StatementSummary {
 }
 // --- End of New Type Definitions ---
 
+function scrubPii(data: StatementSummary) {
+  const maskAccountNumber = (num?: string) => {
+    if (!num) return num;
+    if (num.length <= 4) return num;
+    return num.slice(-4).padStart(num.length, '*');
+  };
+
+  const cleanAccounts = (accounts: Account[]) => {
+    for (const acct of accounts) {
+      delete (acct as any).account_holder;
+      if (acct.account_number) {
+        acct.account_number = maskAccountNumber(acct.account_number);
+      }
+    }
+  };
+
+  if (data.personal_investment_accounts) {
+    cleanAccounts(data.personal_investment_accounts);
+  }
+  if (data.retirement_investment_accounts_tax_qualified) {
+    cleanAccounts(data.retirement_investment_accounts_tax_qualified);
+  }
+}
+
 const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -55,6 +79,7 @@ async function processStatementInBackground(statementId: string, filePath: strin
   try {
     console.log(`[Background] Starting analysis for statement: ${statementId}`);
     const parsedData = await analyzeWithGemini(filePath);
+    scrubPii(parsedData);
 
     await prisma.statement.update({
       where: { id: statementId },
@@ -71,6 +96,13 @@ async function processStatementInBackground(statementId: string, filePath: strin
       where: { id: statementId },
       data: { status: 'FAILED', error: error.message },
     });
+  } finally {
+    try {
+      await fs.promises.unlink(filePath);
+      console.log(`[Background] Deleted temp file ${filePath}`);
+    } catch (err) {
+      console.error(`[Background] Failed to delete temp file ${filePath}:`, err);
+    }
   }
 }
 
@@ -129,7 +161,8 @@ async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
       2.  **holdings**: This is the most important part. For every investment account, you MUST list all individual positions in the holdings array.
       3.  **qualitativeSummary**: Always provide a helpful, concise summary.
       4.  If the statement is very simple (e.g., a bank statement with no investments), populate the top-level fields and leave the account arrays empty.
-  
+      5.  IMPORTANT: For privacy, redact all personal names and use only the last 4 digits of any account numbers in the final JSON output. The "account_holder" field should be omitted.
+
       Now, process the attached PDF and provide ONLY the JSON output.
     `;
   
