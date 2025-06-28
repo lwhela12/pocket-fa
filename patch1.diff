@@ -1,0 +1,66 @@
+--- components/layout/DashboardLayout.tsx	2025-06-28 12:07:19
++++ code1_dashboardlayout.tsx	2025-06-28 13:17:03
+@@ -20,13 +20,11 @@
+   const router = useRouter();
+ 
+   useEffect(() => {
+-    // Redirect to login if not authenticated and not loading
+     if (!loading && !user) {
+       router.push('/auth/login');
+     }
+   }, [user, loading, router]);
+ 
+-  // Show nothing while checking authentication
+   if (loading || !user) {
+     return (
+       <div className="flex min-h-screen items-center justify-center">
+@@ -46,19 +44,34 @@
+         <link rel="icon" href="/favicon.ico" />
+       </Head>
+ 
+-      <div className="min-h-screen bg-gray-50">
++      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100">
+         <Navbar />
+ 
+-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
+-          <main>{children}</main>
+-          <div
+-            className={`${isChatPanelVisible ? 'block' : 'hidden'} h-[calc(100vh-7rem)] overflow-y-auto`}
+-          >
+-            <ChatInterface />
++        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
++          <div className="flex gap-6 min-h-[calc(100vh-8rem)]">
++            {/* Main Content */}
++            <main 
++              className={`flex-1 transition-all duration-300 ease-in-out ${
++                isChatPanelVisible ? 'mr-0' : 'mr-0'
++              }`}
++            >
++              <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-6">
++                {children}
++              </div>
++            </main>
++
++            {/* Chat Panel */}
++            {isChatPanelVisible && (
++              <div className="w-[400px] min-w-[350px] max-w-[500px] transition-all duration-300 ease-in-out">
++                <div className="h-full bg-white/90 backdrop-blur-md rounded-2xl border border-white/30 shadow-2xl overflow-hidden">
++                  <ChatInterface />
++                </div>
++              </div>
++            )}
+           </div>
+         </div>
+ 
+-        <footer className="border-t border-gray-200 bg-white py-6">
++        <footer className="border-t border-white/20 bg-white/50 backdrop-blur-sm py-6">
+           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+             <p className="text-center text-sm text-gray-500">
+               &copy; {new Date().getFullYear()} Pocket Financial Advisor. All rights reserved.
+@@ -68,4 +81,4 @@
+       </div>
+     </>
+   );
+-}
+\ No newline at end of file
++}

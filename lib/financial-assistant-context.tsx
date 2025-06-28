@@ -21,7 +21,7 @@ interface FinancialAssistantState {
 const FinancialAssistantContext = createContext<FinancialAssistantState | null>(null);
 
 export function FinancialAssistantProvider({ children }: { children: ReactNode }) {
-  const [isChatPanelVisible, setIsChatPanelVisible] = useState(false);
+  const [isChatPanelVisible, setIsChatPanelVisible] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [chatMode, setChatMode] = useState<'holistic' | 'statement'>('holistic');
   const [activeStatementId, setActiveStatementId] = useState<string | null>(null);

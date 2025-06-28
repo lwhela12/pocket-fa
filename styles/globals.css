@@ -4,11 +4,11 @@
 
 @layer base {
   html {
-    font-family: 'Roboto', system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
   
   body {
-    @apply bg-white text-gray-900 antialiased;
+    @apply bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 text-gray-900 antialiased;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -30,22 +30,42 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
   }
   
   .btn-primary {
-    @apply bg-primary text-white hover:bg-blue-600 focus:ring-blue-500;
+    @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95;
   }
   
   .btn-secondary {
-    @apply bg-secondary text-white hover:bg-green-600 focus:ring-green-500;
+    @apply bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 focus:ring-green-500 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95;
+  }
+  
+  .btn-error {
+    @apply bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 focus:ring-red-500 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95;
   }
   
   .input {
-    @apply rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+    @apply rounded-xl border border-gray-300 px-4 py-3 bg-white/90 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200;
   }
   
   .card {
-    @apply rounded-lg bg-white p-6 shadow;
+    @apply rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-xl border border-white/20;
+  }
+  
+  .prose {
+    @apply max-w-none;
+  }
+  
+  .prose p {
+    @apply mb-2;
+  }
+  
+  .prose ul {
+    @apply mb-2;
+  }
+  
+  .prose li {
+    @apply mb-1;
   }
 }

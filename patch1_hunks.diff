@@ -1,0 +1,18 @@
+@@ -20,13 +20,11 @@
+   const router = useRouter();
+ 
+   useEffect(() => {
+-    // Redirect to login if not authenticated and not loading
+     if (!loading && !user) {
+       router.push('/auth/login');
+     }
+   }, [user, loading, router]);
+ 
+-  // Show nothing while checking authentication
+   if (loading || !user) {
+     return (
+       <div className="flex min-h-screen items-center justify-center">
+@@ -46,19 +44,34 @@
+         <link rel="icon" href="/favicon.ico" />
+       </Head>
+ 

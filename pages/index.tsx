@@ -1,4 +1,4 @@
-// @ts-nocheck
+// (TS-checking disabled for brevity)
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -26,7 +26,7 @@ export default function Home() {
             Your personalized financial companion, providing actionable insights for your financial journey.
           </p>
 
-          <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
+          <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
             <Link 
               href="/auth/login"
               className="btn btn-primary px-8 py-3 text-base"
