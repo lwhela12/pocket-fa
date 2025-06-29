@@ -3,20 +3,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
 import { useFinancialAssistant } from '../../lib/financial-assistant-context';
-import Modal from './Modal';
 
 export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isDashModalOpen, setIsDashModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const { user, logout } = useAuth();
   const { toggleChatPanel, isChatPanelVisible } = useFinancialAssistant();
 
   const handleLogout = () => {
     logout();
+    setIsProfileMenuOpen(false);
+    setIsMobileMenuOpen(false);
   };
-
-  const closeDashModal = () => setIsDashModalOpen(false);
 
   const getInitial = () => {
     if (user?.name) {
@@ -29,19 +28,18 @@ export default function Navbar() {
   };
 
   return (
-    <>
-      <nav className="bg-white/90 backdrop-blur-md border-b border-white/20 shadow-lg sticky top-0 z-30">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 justify-between items-center">
+    <nav className="bg-white/90 backdrop-blur-md border-b border-white/20 shadow-lg sticky top-0 z-30">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="flex h-14 sm:h-16 justify-between items-center">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/analyzer" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            <Link href="/analyzer" className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Pocket FA
             </Link>
           </div>
 
-          {/* Navigation Links */}
-          <div className="hidden sm:flex items-center space-x-2">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-2">
             <div className="flex bg-gray-100/80 p-1 rounded-xl">
               <Link
                 href="/analyzer"
@@ -55,10 +53,6 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/dashboard"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsDashModalOpen(true);
-                }}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   router.pathname === '/dashboard'
                     ? 'bg-white text-blue-600 shadow-sm'
@@ -71,29 +65,43 @@ export default function Navbar() {
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-4">
-            {/* Chat Toggle */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Desktop Chat Toggle */}
             <button
               type="button"
               onClick={toggleChatPanel}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              className={`hidden md:flex px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isChatPanelVisible 
                   ? 'bg-blue-100 text-blue-700 border border-blue-200' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
               }`}
             >
-              {isChatPanelVisible ? 'Hide Chat' : 'Show Chat'}
+              <span className="hidden lg:inline">{isChatPanelVisible ? 'Hide Chat' : 'Show Chat'}</span>
+              <span className="lg:hidden">💬</span>
+            </button>
+
+            {/* Mobile Chat Toggle */}
+            <button
+              type="button"
+              onClick={toggleChatPanel}
+              className={`md:hidden p-2 rounded-lg transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                isChatPanelVisible 
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+              }`}
+            >
+              💬
             </button>
 
             {/* Profile Menu */}
             <div className="relative">
               <button
                 type="button"
-                className="flex items-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                className="flex items-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 min-h-[44px] min-w-[44px]"
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               >
                 <span className="sr-only">Open user menu</span>
-                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center font-semibold">
+                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-white/20 flex items-center justify-center font-semibold text-sm sm:text-base">
                   {getInitial()}
                 </div>
               </button>
@@ -106,31 +114,28 @@ export default function Navbar() {
                   />
                   <div className="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-xl bg-white/95 backdrop-blur-md py-2 shadow-xl ring-1 ring-black/5 border border-white/20">
                     <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">{user?.name || 'User'}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'User'}</p>
                       <p className="text-sm text-gray-500 truncate">{user?.email}</p>
                     </div>
                     
                     <Link
                       href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       Your Profile
                     </Link>
                     <Link
                       href="/profile/settings"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       Settings
                     </Link>
                     <div className="border-t border-gray-100 mt-2 pt-2">
                       <button
-                        onClick={() => {
-                          handleLogout();
-                          setIsProfileMenuOpen(false);
-                        }}
-                        className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
+                        onClick={handleLogout}
+                        className="block w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
                       >
                         Sign out
                       </button>
@@ -139,49 +144,50 @@ export default function Navbar() {
                 </>
               )}
             </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              type="button"
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Mobile menu */}
-      <div className="sm:hidden border-t border-white/20 bg-white/80">
-        <div className="space-y-1 px-4 py-3">
-          <Link
-            href="/analyzer"
-            className={`block rounded-lg px-3 py-2 text-base font-medium transition-colors duration-200 ${
-              router.pathname === '/analyzer'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`}
-          >
-            Statement Analyzer
-          </Link>
-          <Link
-            href="/dashboard"
-            onClick={(e) => {
-              e.preventDefault();
-              setIsDashModalOpen(true);
-            }}
-            className={`block rounded-lg px-3 py-2 text-base font-medium transition-colors duration-200 ${
-              router.pathname === '/dashboard'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`}
-          >
-            Dashboard
-          </Link>
-          <button
-            onClick={toggleChatPanel}
-            className="block w-full text-left rounded-lg px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200"
-          >
-            {isChatPanelVisible ? 'Hide Chat' : 'Show Chat'}
-          </button>
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-white/20 bg-white/95 backdrop-blur-md">
+          <div className="px-3 py-3 space-y-1">
+            <Link
+              href="/analyzer"
+              className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
+                router.pathname === '/analyzer'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Statement Analyzer
+            </Link>
+            <Link
+              href="/dashboard"
+              className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
+                router.pathname === '/dashboard'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Dashboard
+            </Link>
+          </div>
         </div>
-      </div>
-      </nav>
-      <Modal isOpen={isDashModalOpen} onClose={closeDashModal} title="Coming Soon">
-        <p className="text-center text-gray-700">The Dashboard feature is coming soon!</p>
-      </Modal>
-    </>
+      )}
+    </nav>
   );
 }
