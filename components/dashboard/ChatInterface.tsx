@@ -97,20 +97,16 @@ export default function ChatInterface() {
       <div className={containerClasses}>
         {/* Header */}
         <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 px-4 sm:px-6 py-3 sm:py-4 text-white shadow-lg">
-          {/* Mobile: Close button in top-right corner */}
+          {/* Close button - properly aligned for both mobile and desktop */}
           <button 
             onClick={toggleChatPanel}
-            className={`absolute ${
-              isMobile 
-                ? 'top-3 right-3 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full' 
-                : '-top-2 -right-2 w-7 h-7 bg-red-500/80 hover:bg-red-600 rounded-full border-2 border-white'
-            } flex items-center justify-center text-white text-sm font-medium transition-all duration-200 hover:scale-110 shadow-lg`}
+            className="absolute top-3 right-3 w-8 h-8 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all duration-200 hover:scale-110 shadow-lg border-2 border-white"
             title="Hide Chat"
           >
             ×
           </button>
           
-          <div className="flex items-center justify-between pr-10 sm:pr-0">
+          <div className="flex items-center justify-between pr-12">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg">
                 AI
