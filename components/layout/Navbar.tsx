@@ -36,7 +36,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white/90 backdrop-blur-md border-b border-white/20 shadow-lg top-0 z-30">
+    <nav className="bg-white border-b border-gray-200 shadow-lg top-0 z-30">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
         <div className="flex h-14 sm:h-16 justify-between items-center">
           {/* Logo */}
@@ -121,7 +121,7 @@ export default function Navbar() {
                     className="fixed inset-0 z-10" 
                     onClick={() => setIsProfileMenuOpen(false)}
                   />
-                  <div className="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-xl bg-white/95 backdrop-blur-md py-2 shadow-xl ring-1 ring-black/5 border border-white/20">
+                  <div className="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5 border border-gray-200">
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'User'}</p>
                       <p className="text-sm text-gray-500 truncate">{user?.email}</p>
@@ -170,7 +170,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-white/20 bg-white/95 backdrop-blur-md">
+        <div className="md:hidden border-t border-gray-200 bg-white">
           <div className="px-3 py-3 space-y-1">
             <Link
               href="/analyzer"
@@ -201,11 +201,11 @@ export default function Navbar() {
       {isDashboardPopupOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 z-40"
             onClick={() => setIsDashboardPopupOpen(false)}
           />
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16">
-            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full pointer-events-auto">
               <h2 className="text-lg font-semibold mb-2">Coming Soon!</h2>
               <p className="text-sm text-gray-600 mb-4">
                 The Dashboard feature is on our roadmap. Stay tuned!

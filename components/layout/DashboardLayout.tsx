@@ -68,7 +68,7 @@ export default function DashboardLayout({
           <div className="hidden md:flex gap-6">
             {/* Main Content */}
             <main className="flex-1 transition-all duration-300 ease-in-out">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-4 sm:p-6">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-4 sm:p-6">
                 {children}
               </div>
             </main>
@@ -77,7 +77,7 @@ export default function DashboardLayout({
             {isChatPanelVisible && (
               <div className="w-[400px] min-w-[350px] max-w-[500px] transition-all duration-300 ease-in-out flex-shrink-0 self-start sticky top-20">
                 <div
-                  className="bg-white/90 backdrop-blur-md rounded-2xl border border-white/30 shadow-2xl flex overflow-hidden"
+                  className="bg-white rounded-2xl border border-gray-200 shadow-2xl flex overflow-hidden"
                   style={{ height: 'calc(100vh - 6rem)' }}
                 >
                   <ChatInterface />
@@ -90,7 +90,7 @@ export default function DashboardLayout({
           <div className="md:hidden min-h-[calc(100vh-8rem)]">
             {/* Main Content */}
             <main className="relative">
-              <div className="bg-white/90 rounded-2xl border border-white/20 shadow-xl p-4 mb-20">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-4 mb-20">
                 {children}
               </div>
             </main>
@@ -99,7 +99,7 @@ export default function DashboardLayout({
             {isChatPanelVisible && (
               <div className="fixed inset-0 z-40 md:hidden">
                 {/* Backdrop */}
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+                <div className="absolute inset-0 bg-black/50" />
                 
                 {/* Chat Panel */}
                 <div className="absolute bottom-0 left-0 right-0 h-[85vh] bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out">
@@ -110,7 +110,7 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        <footer className="border-t border-white/20 bg-white/50 backdrop-blur-sm py-4 sm:py-6">
+        <footer className="border-t border-gray-200 bg-white py-4 sm:py-6">
           <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
             <p className="text-center text-sm text-gray-500">
               &copy; {new Date().getFullYear()} Pocket Financial Advisor. All rights reserved.
