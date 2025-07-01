@@ -68,6 +68,30 @@
   .prose li {
     @apply mb-1;
   }
+
+  /* Chat Interface Specific Styles */
+  .chat-messages-container {
+    /* Ensure smooth scrolling for chat messages */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  }
+
+  .chat-messages-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .chat-messages-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .chat-messages-container::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 3px;
+  }
+
+  .chat-messages-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.7);
+  }
 }
 
 /* Mobile-specific enhancements */
@@ -86,6 +110,7 @@
   /* Smooth touch scrolling */
   .touch-scroll {
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   /* Better touch targets */
@@ -102,6 +127,16 @@
     -ms-user-select: none;
     user-select: none;
   }
+
+  .chat-mobile-height {
+    height: calc(100vh - 180px);
+    max-height: calc(100vh - 180px);
+  }
+
+  .chat-fullscreen-height {
+    height: calc(100vh - 280px);
+    max-height: calc(100vh - 280px);
+  }
 }
 
 /* Mobile-specific component styles */
@@ -116,6 +151,12 @@
 
   .btn-sm {
     @apply min-h-[40px] px-4;
+  }
+
+  /* Ensure chat input stays at bottom on mobile */
+  .chat-messages-container {
+    /* Prevent overscroll on mobile to keep input visible */
+    overscroll-behavior-y: contain;
   }
 }
 

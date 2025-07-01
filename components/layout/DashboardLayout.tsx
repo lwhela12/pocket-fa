@@ -60,12 +60,12 @@ export default function DashboardLayout({
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 sticky top-0">
         <Navbar />
 
         <div className="container mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
           {/* Desktop Layout */}
-          <div className="hidden md:flex gap-6 min-h-[calc(100vh-8rem)]">
+          <div className="hidden md:flex gap-6">
             {/* Main Content */}
             <main className="flex-1 transition-all duration-300 ease-in-out">
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-4 sm:p-6">
@@ -73,10 +73,13 @@ export default function DashboardLayout({
               </div>
             </main>
 
-            {/* Desktop Chat Panel */}
+            {/* Desktop Chat Panel - Fixed height and position */}
             {isChatPanelVisible && (
-              <div className="w-[400px] min-w-[350px] max-w-[500px] transition-all duration-300 ease-in-out">
-                <div className="h-full bg-white/90 backdrop-blur-md rounded-2xl border border-white/30 shadow-2xl overflow-hidden">
+              <div className="w-[400px] min-w-[350px] max-w-[500px] transition-all duration-300 ease-in-out flex-shrink-0 self-start sticky top-20">
+                <div
+                  className="bg-white/90 backdrop-blur-md rounded-2xl border border-white/30 shadow-2xl flex overflow-hidden"
+                  style={{ height: 'calc(100vh - 6rem)' }}
+                >
                   <ChatInterface />
                 </div>
               </div>

@@ -89,8 +89,8 @@ export default function ChatInterface() {
   // Create portal for fullscreen mode to escape parent containers
   const fullscreenContent = (
     <div className={containerClasses}>
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 px-4 sm:px-6 py-3 sm:py-4 text-white shadow-lg">
+      {/* Header - Fixed at top */}
+      <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 px-4 sm:px-6 py-3 sm:py-4 text-white shadow-lg flex-shrink-0">
         {/* Close button - properly aligned for both mobile and desktop */}
         <button 
           onClick={toggleChatPanel}
@@ -127,17 +127,15 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages - Scrollable middle section */}
       <div 
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 sm:space-y-2" 
-        style={{ 
-          maxHeight: isMobile 
-            ? 'calc(85vh - 180px)' 
+        className={`flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 sm:space-y-2 touch-scroll chat-messages-container ${
+          isMobile 
+            ? 'chat-mobile-height' 
             : isFullscreen 
-              ? 'calc(100vh - 200px)' 
-              : 'calc(100vh - 300px)',
-          WebkitOverflowScrolling: 'touch'
-        }}
+              ? 'chat-fullscreen-height' 
+              : 'h-full'
+        }`}
       >
         {messages.map(m => (
           <MemoizedMessage key={m.id} message={m} />
@@ -157,53 +155,56 @@ export default function ChatInterface() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggestions */}
-      {showSuggestions && (
-        <div className="p-3 sm:p-4 border-t border-gray-200/50 bg-gray-50/50">
-          <p className="text-xs text-gray-500 mb-2 sm:mb-3 font-medium">Quick Actions</p>
-          <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
-            {suggestedQuestions.map(q => (
-              <button
-                key={q}
-                className="text-xs sm:text-sm bg-white/80 text-gray-700 hover:bg-blue-50 hover:text-blue-700 px-3 py-2 sm:py-2 rounded-lg border border-gray-200/80 transition-all duration-200 hover:shadow-sm min-h-[44px] sm:min-h-auto touch-manipulation"
-                onClick={() => {
-                  setShowSuggestions(false);
-                  addMessage(q);
-                }}
-              >
-                {q}
-              </button>
-            ))}
+      {/* Bottom section - Fixed at bottom */}
+      <div className="flex-shrink-0">
+        {/* Suggestions - Only show when needed */}
+        {showSuggestions && (
+          <div className="p-3 sm:p-4 border-t border-gray-200/50 bg-gray-50/50">
+            <p className="text-xs text-gray-500 mb-2 sm:mb-3 font-medium">Quick Actions</p>
+            <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
+              {suggestedQuestions.map(q => (
+                <button
+                  key={q}
+                  className="text-xs sm:text-sm bg-white/80 text-gray-700 hover:bg-blue-50 hover:text-blue-700 px-3 py-2 sm:py-2 rounded-lg border border-gray-200/80 transition-all duration-200 hover:shadow-sm min-h-[44px] sm:min-h-auto touch-manipulation"
+                  onClick={() => {
+                    setShowSuggestions(false);
+                    addMessage(q);
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Input */}
-      <form className="p-3 sm:p-4 border-t border-gray-200/50 bg-white/80" onSubmit={handleSendMessage}>
-        <div className="flex gap-2 sm:gap-3 items-end">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="Type your message..."
-              className="w-full px-3 sm:px-4 py-3 sm:py-3 text-base rounded-xl border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm min-h-[44px]"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck="false"
-            />
+        {/* Input - Always at bottom */}
+        <form className="p-3 sm:p-4 border-t border-gray-200/50 bg-white/80" onSubmit={handleSendMessage}>
+          <div className="flex gap-2 sm:gap-3 items-end">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Type your message..."
+                className="w-full px-3 sm:px-4 py-3 sm:py-3 text-base rounded-xl border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm min-h-[44px]"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="px-4 sm:px-6 py-3 sm:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform active:scale-95 font-medium min-h-[44px] min-w-[60px] sm:min-w-auto touch-manipulation"
+              disabled={!input.trim()}
+            >
+              <span className="hidden sm:inline">Send</span>
+              <span className="sm:hidden">→</span>
+            </button>
           </div>
-          <button 
-            type="submit" 
-            className="px-4 sm:px-6 py-3 sm:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform active:scale-95 font-medium min-h-[44px] min-w-[60px] sm:min-w-auto touch-manipulation"
-            disabled={!input.trim()}
-          >
-            <span className="hidden sm:inline">Send</span>
-            <span className="sm:hidden">→</span>
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 

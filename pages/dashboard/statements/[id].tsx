@@ -1,3 +1,4 @@
+
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
@@ -5,6 +6,7 @@ import StatementDetails from '../../../components/dashboard/StatementDetails';
 import { Statement } from '@prisma/client';
 import { StatementSummary } from '../../api/statement-upload';
 import { fetchApi } from '../../../lib/api-utils'; // Import the correct fetcher
+import { useFinancialAssistant } from '../../../lib/financial-assistant-context';
 
 // Use the project-specific fetchApi utility for SWR
 const fetcher = (url: string) => fetchApi(url).then(res => {
@@ -17,13 +19,9 @@ const fetcher = (url: string) => fetchApi(url).then(res => {
 export default function StatementDetailPage() {
   const router = useRouter();
   const { id } = router.query;
+  const { openChat } = useFinancialAssistant();
 
   const { data, error } = useSWR<{ success: boolean, data?: Statement, error?: string }>(id ? `/api/statements/${id}` : null, fetcher);
-
-  const handleReview = () => {
-    // Placeholder for chat review functionality
-    console.log(`Reviewing statement ${id} with AI...`);
-  };
 
   return (
     <DashboardLayout>
@@ -39,7 +37,7 @@ export default function StatementDetailPage() {
                 <p className="text-sm text-gray-500">Status: <span className={`font-semibold ${data.data.status === 'COMPLETED' ? 'text-green-600' : 'text-yellow-600'}`}>{data.data.status}</span></p>
               </div>
               <button 
-                onClick={handleReview}
+                onClick={() => openChat('statement', { id: data.data.id, name: data.data.fileName })}
                 className="btn btn-primary"
               >
                 Review with AI
@@ -57,3 +55,4 @@ export default function StatementDetailPage() {
     </DashboardLayout>
   );
 }
+
