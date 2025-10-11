@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma migrate deploy && npm run seed:conditional && next build",
+    "seed:conditional": "if [ \"$SEED_DATABASE\" = \"true\" ]; then prisma db seed; fi",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
