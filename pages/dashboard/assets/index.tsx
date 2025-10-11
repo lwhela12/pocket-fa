@@ -251,7 +251,7 @@ const Assets: NextPageWithLayout = () => {
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium leading-6 text-gray-900">Assets Summary</h3>
-              <div className="mt-2 flex justify-between border-b border-gray-200 pb-5">
+              <div className="mt-2 grid grid-cols-2 gap-4 border-b border-gray-200 pb-5 sm:grid-cols-4">
                 <div>
                   <p className="text-sm text-gray-500">Total Cash</p>
                   <p className="text-2xl font-medium text-gray-900">
@@ -268,6 +268,16 @@ const Assets: NextPageWithLayout = () => {
                     {formatCurrency(
                       assets
                         .filter(asset => asset.type === 'Investment')
+                        .reduce((sum, asset) => sum + asset.balance, 0)
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Lifestyle Assets</p>
+                  <p className="text-2xl font-medium text-gray-900">
+                    {formatCurrency(
+                      assets
+                        .filter(asset => asset.type === 'Lifestyle')
                         .reduce((sum, asset) => sum + asset.balance, 0)
                     )}
                   </p>
@@ -373,6 +383,56 @@ const Assets: NextPageWithLayout = () => {
                               </button>
                               <span className="mx-2 text-gray-300">|</span>
                               <ReviewButton recordType="asset" record={asset} />
+                              <span className="mx-2 text-gray-300">|</span>
+                              <button
+                                className="text-red-600 hover:text-red-900"
+                                onClick={() => {
+                                  setAssetToDelete(asset);
+                                  setIsDeleteModalOpen(true);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Lifestyle Assets */}
+              {assets.filter(asset => asset.type === 'Lifestyle').length > 0 && (
+                <div className="mt-8">
+                  <h4 className="text-base font-medium text-gray-900">Lifestyle Assets</h4>
+                  <p className="text-sm text-gray-500 mt-1">These assets contribute to net worth but are excluded from retirement calculations</p>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-300">
+                      <thead>
+                        <tr>
+                          <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Name</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
+                          <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Estimated Value</th>
+                          <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {assets.filter(asset => asset.type === 'Lifestyle').map(asset => (
+                          <tr key={asset.id}>
+                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{asset.name}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{asset.subtype}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-right text-sm font-medium text-gray-900">{formatCurrency(asset.balance)}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-right text-sm font-medium">
+                              <button
+                                className="text-primary hover:text-blue-900"
+                                onClick={() => {
+                                  setEditingAsset(asset);
+                                  setIsModalOpen(true);
+                                }}
+                              >
+                                Edit
+                              </button>
                               <span className="mx-2 text-gray-300">|</span>
                               <button
                                 className="text-red-600 hover:text-red-900"

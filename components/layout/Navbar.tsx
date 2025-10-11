@@ -8,7 +8,6 @@ import { useFinancialAssistant } from '../../lib/financial-assistant-context';
 export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDashboardPopupOpen, setIsDashboardPopupOpen] = useState(false);
   const router = useRouter();
   const { user, logout } = useAuth();
   const { toggleChatPanel, isChatPanelVisible } = useFinancialAssistant();
@@ -17,12 +16,6 @@ export default function Navbar() {
     logout();
     setIsProfileMenuOpen(false);
     setIsMobileMenuOpen(false);
-  };
-  
-  const handleDashboardClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    setIsMobileMenuOpen(false);
-    setIsDashboardPopupOpen(true);
   };
 
   const getInitial = () => {
@@ -61,14 +54,53 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/dashboard"
-                onClick={handleDashboardClick}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  router.pathname === '/dashboard'
+                  router.pathname === '/dashboard' || router.pathname.startsWith('/dashboard')
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
               >
                 Dashboard
+              </Link>
+              <Link
+                href="/dashboard/assets"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  router.pathname.startsWith('/dashboard/assets')
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                }`}
+              >
+                Assets
+              </Link>
+              <Link
+                href="/dashboard/debts"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  router.pathname.startsWith('/dashboard/debts')
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                }`}
+              >
+                Debts
+              </Link>
+              <Link
+                href="/dashboard/expenses"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  router.pathname.startsWith('/dashboard/expenses')
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                }`}
+              >
+                Expenses
+              </Link>
+              <Link
+                href="/dashboard/goals"
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  router.pathname.startsWith('/dashboard/goals')
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                }`}
+              >
+                Goals
               </Link>
             </div>
           </div>
@@ -185,40 +217,61 @@ export default function Navbar() {
             </Link>
             <Link
               href="/dashboard"
-              onClick={handleDashboardClick}
               className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
                 router.pathname === '/dashboard'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
-              Dashboard
+              Dashboard Overview
+            </Link>
+            <Link
+              href="/dashboard/assets"
+              className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
+                router.pathname.startsWith('/dashboard/assets')
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Assets
+            </Link>
+            <Link
+              href="/dashboard/debts"
+              className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
+                router.pathname.startsWith('/dashboard/debts')
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Debts
+            </Link>
+            <Link
+              href="/dashboard/expenses"
+              className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
+                router.pathname.startsWith('/dashboard/expenses')
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Expenses
+            </Link>
+            <Link
+              href="/dashboard/goals"
+              className={`block rounded-lg px-3 py-3 text-base font-medium transition-colors duration-200 ${
+                router.pathname.startsWith('/dashboard/goals')
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Goals
             </Link>
           </div>
         </div>
-      )}
-
-      {isDashboardPopupOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 z-40"
-            onClick={() => setIsDashboardPopupOpen(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 pointer-events-none">
-            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full pointer-events-auto">
-              <h2 className="text-lg font-semibold mb-2">Coming Soon!</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                The Dashboard feature is on our roadmap. Stay tuned!
-              </p>
-              <button
-                onClick={() => setIsDashboardPopupOpen(false)}
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </>
       )}
     </nav>
   );

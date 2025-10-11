@@ -17,6 +17,18 @@ export function projectAssetValue(asset: AssetProjectionInput, years: number): n
   return fvPrincipal + fvContrib;
 }
 
+export function futureValue(principal: number, rate: number, years: number): number {
+  if (years <= 0) return principal;
+  if (rate === 0) return principal;
+  return principal * Math.pow(1 + rate, years);
+}
+
+export function futureValueOfAnnuity(payment: number, rate: number, years: number): number {
+  if (years <= 0) return 0;
+  if (rate === 0) return payment * years;
+  return payment * ((Math.pow(1 + rate, years) - 1) / rate);
+}
+
 export function calculateGoalSuccess(
   goalAmount: number,
   goalYears: number,

@@ -8,9 +8,10 @@ type AssetFormProps = {
   isSubmitting: boolean;
 };
 
-const assetTypes = ['Cash', 'Investment'];
+const assetTypes = ['Cash', 'Investment', 'Lifestyle'];
 const cashSubtypes = ['Checking', 'Savings', 'Money Market', 'Certificate of Deposit'];
 const investmentSubtypes = ['401(k)', 'Roth IRA', 'Traditional IRA', 'Taxable', 'Stock', 'Bond', 'ETF', 'Mutual Fund'];
+const lifestyleSubtypes = ['Primary Residence', 'Vacation Home', 'Vehicle', 'Jewelry', 'Art & Collectibles', 'Other'];
 const assetClasses = ['Stocks', 'Bonds', 'ETFs', 'Mutual Funds', 'Real Estate', 'Cash Equivalents', 'Other'];
 
 const AssetForm = ({ onSubmit, onCancel, initialValues, isSubmitting }: AssetFormProps) => {
@@ -144,11 +145,18 @@ const AssetForm = ({ onSubmit, onCancel, initialValues, isSubmitting }: AssetFor
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
             >
               <option value="">Select Subtype</option>
-              {formData.type === 'Cash' ? 
+              {formData.type === 'Cash' &&
                 cashSubtypes.map(subtype => (
                   <option key={subtype} value={subtype}>{subtype}</option>
-                )) :
+                ))
+              }
+              {formData.type === 'Investment' &&
                 investmentSubtypes.map(subtype => (
+                  <option key={subtype} value={subtype}>{subtype}</option>
+                ))
+              }
+              {formData.type === 'Lifestyle' &&
+                lifestyleSubtypes.map(subtype => (
                   <option key={subtype} value={subtype}>{subtype}</option>
                 ))
               }

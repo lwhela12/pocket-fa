@@ -6,6 +6,7 @@ import NetWorthCard from '../../components/dashboard/NetWorthCard';
 import AssetAllocationCard from '../../components/dashboard/AssetAllocationCard';
 import FinancialProjectionsCard from '../../components/dashboard/FinancialProjectionsCard';
 import ProgressChart from '../../components/dashboard/ProgressChart';
+import ExpenseSummaryCard from '../../components/dashboard/ExpenseSummaryCard';
 import { NextPageWithLayout } from '../_app';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchApi } from '../../lib/api-utils';
@@ -217,81 +218,30 @@ const Dashboard: NextPageWithLayout = () => {
               </motion.div>
             )}
             
-            <motion.div variants={item} className="rounded-lg bg-white p-6 shadow">
-              <h3 className="mb-4 text-lg font-medium text-gray-700">Recent Activity</h3>
-              {assetCount === 0 && debtCount === 0 && goals.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  <p>Add assets, debts, or goals to see your financial activity</p>
-                  <div className="flex justify-center mt-4 space-x-4">
-                    <button 
-                      className="btn bg-white px-4 py-2 text-sm text-primary ring-1 ring-primary hover:bg-gray-50"
-                      onClick={() => router.push('/dashboard/assets')}
-                    >
-                      Add Assets
-                    </button>
-                    <button 
-                      className="btn bg-white px-4 py-2 text-sm text-primary ring-1 ring-primary hover:bg-gray-50"
-                      onClick={() => router.push('/dashboard/debts')}
-                    >
-                      Add Debts
-                    </button>
-                    <button 
-                      className="btn bg-white px-4 py-2 text-sm text-primary ring-1 ring-primary hover:bg-gray-50"
-                      onClick={() => router.push('/dashboard/goals')}
-                    >
-                      Add Goals
-                    </button>
-                  </div>
+            {dashboardData?.expenseSummary ? (
+              <motion.div variants={item}>
+                <ExpenseSummaryCard
+                  living={dashboardData.expenseSummary.living}
+                  entertainment={dashboardData.expenseSummary.entertainment}
+                  discretionary={dashboardData.expenseSummary.discretionary}
+                  total={dashboardData.expenseSummary.total}
+                  monthlyIncome={12500}
+                />
+              </motion.div>
+            ) : (
+              <motion.div variants={item} className="rounded-lg bg-white p-6 shadow">
+                <h3 className="mb-4 text-lg font-medium text-gray-700">Monthly Expenses</h3>
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">No expense data for this month</p>
+                  <button
+                    className="btn bg-primary px-4 py-2 text-sm text-white hover:bg-blue-700"
+                    onClick={() => router.push('/dashboard/expenses')}
+                  >
+                    Add Expenses
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {assetCount > 0 && (
-                    <div className="flex justify-between border-b border-gray-100 pb-3">
-                      <div>
-                        <p className="font-medium text-gray-900">Total Assets</p>
-                        <p className="text-sm text-gray-500">{assetCount} assets tracked</p>
-                      </div>
-                      <p className="font-medium text-green-600">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                        }).format(totalAssets)}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {debtCount > 0 && (
-                    <div className="flex justify-between border-b border-gray-100 pb-3">
-                      <div>
-                        <p className="font-medium text-gray-900">Total Debts</p>
-                        <p className="text-sm text-gray-500">{debtCount} debts tracked</p>
-                      </div>
-                      <p className="font-medium text-red-600">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                        }).format(-totalDebts)}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {goals.length > 0 && (
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">Financial Goals</p>
-                        <p className="text-sm text-gray-500">{goals.filter(g => g.isActive).length} active goals</p>
-                      </div>
-                      <button 
-                        className="text-primary hover:text-blue-700 text-sm font-medium"
-                        onClick={() => router.push('/dashboard/goals')}
-                      >
-                        View Goals →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
+              </motion.div>
+            )}
           </motion.div>
           
       </>

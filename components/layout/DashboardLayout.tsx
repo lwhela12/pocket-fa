@@ -27,8 +27,8 @@ export default function DashboardLayout({
 
   // Prevent body scroll when chat is open on mobile
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (isChatPanelVisible && window.innerWidth < 768) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      if (isChatPanelVisible) {
         document.body.style.overflow = 'hidden';
       } else {
         document.body.style.overflow = 'unset';
@@ -36,7 +36,9 @@ export default function DashboardLayout({
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        document.body.style.overflow = 'unset';
+      }
     };
   }, [isChatPanelVisible]);
 
@@ -64,50 +66,43 @@ export default function DashboardLayout({
         <Navbar />
 
         <div className="container mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
-          {/* Desktop Layout */}
-          <div className="hidden md:flex gap-6">
-            {/* Main Content */}
-            <main className="flex-1 transition-all duration-300 ease-in-out">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-4 sm:p-6">
-                {children}
-              </div>
-            </main>
+          {/* Main Content - Always full width */}
+          <main className="w-full">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-4 sm:p-6 min-h-[calc(100vh-12rem)]">
+              {children}
+            </div>
+          </main>
 
-            {/* Desktop Chat Panel - Fixed height and position */}
-            {isChatPanelVisible && (
-              <div className="w-[400px] min-w-[350px] max-w-[500px] transition-all duration-300 ease-in-out flex-shrink-0 self-start sticky top-20">
-                <div
-                  className="bg-white rounded-2xl border border-gray-200 shadow-2xl flex overflow-hidden"
-                  style={{ height: 'calc(100vh - 6rem)' }}
-                >
+          {/* Desktop Chat Panel - Fixed Overlay */}
+          {isChatPanelVisible && (
+            <div className="hidden md:block fixed inset-0 z-40">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                onClick={() => {}} // Prevent click-through
+              />
+
+              {/* Chat Panel - Right side overlay */}
+              <div className="absolute right-0 top-0 bottom-0 w-[450px] bg-white shadow-2xl">
+                <div className="h-full flex flex-col">
                   <ChatInterface />
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Mobile Layout */}
-          <div className="md:hidden min-h-[calc(100vh-8rem)]">
-            {/* Main Content */}
-            <main className="relative">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-4 mb-20">
-                {children}
-              </div>
-            </main>
+          {/* Mobile Chat Panel - Slides up from bottom */}
+          {isChatPanelVisible && (
+            <div className="fixed inset-0 z-40 md:hidden">
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-black/50" />
 
-            {/* Mobile Chat Panel - Slides up from bottom */}
-            {isChatPanelVisible && (
-              <div className="fixed inset-0 z-40 md:hidden">
-                {/* Backdrop */}
-                <div className="absolute inset-0 bg-black/50" />
-                
-                {/* Chat Panel */}
-                <div className="absolute bottom-0 left-0 right-0 h-[85vh] bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out">
-                  <ChatInterface />
-                </div>
+              {/* Chat Panel */}
+              <div className="absolute bottom-0 left-0 right-0 h-[85vh] bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out">
+                <ChatInterface />
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <footer className="border-t border-gray-200 bg-white py-4 sm:py-6">

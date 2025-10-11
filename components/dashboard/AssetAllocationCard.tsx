@@ -12,11 +12,16 @@ type AssetAllocationCardProps = {
 };
 
 const colorMap: Record<string, string> = {
-  'Cash': '#4CAF50',
-  'Stocks': '#2196F3',
-  'Bonds': '#FFC107',
-  'Other Investments': '#9C27B0',
-  'Default': '#E0E0E0',
+  'Cash': '#4CAF50',      // Green
+  'Stocks': '#2196F3',    // Blue
+  'Bonds': '#FFC107',     // Amber/Yellow
+  'ETFs': '#9C27B0',      // Purple
+  'Mutual Funds': '#FF5722', // Deep Orange
+  'Real Estate': '#607D8B',  // Blue Grey
+  'Investment': '#00BCD4',   // Cyan
+  'Lifestyle': '#E91E63',    // Pink
+  'Other': '#795548',        // Brown
+  'Default': '#9E9E9E',      // Grey
 };
 
 const getAllocationColor = (label: string) => colorMap[label] || colorMap['Default'];
@@ -40,40 +45,56 @@ export default function AssetAllocationCard({ allocations, total }: AssetAllocat
       <h3 className="mb-4 text-lg font-medium text-gray-700">Asset Allocation</h3>
       
       <div className="relative mx-auto h-48 w-48">
-        <div className="relative h-full w-full rounded-full">
-          {/* Placeholder for pie chart - in a real app, use a charting library */}
-          <div className="absolute inset-0 overflow-hidden rounded-full bg-gray-200">
-            {allocations.map((allocation, index) => {
-              const startAngle = allocations
-                .slice(0, index)
-                .reduce((sum, curr) => sum + (curr.value / total) * 360, 0);
-              const angle = (allocation.value / total) * 360;
-              
-              return (
-                <div
-                  key={allocation.label}
-                  className="absolute inset-0 origin-center"
-                  style={{
-                    backgroundColor: getAllocationColor(allocation.label),
-                    clipPath: `polygon(50% 50%, 50% 0, ${angle <= 180 ? 
-                      `${50 + 50 * Math.sin(Math.PI * angle / 180)}% ${50 - 50 * Math.cos(Math.PI * angle / 180)}%` :
-                      '100% 0%, 100% 100%, 0% 100%, 0% 0%'
-                    }, 50% 0%)`,
-                    transform: `rotate(${startAngle}deg)`,
-                  }}
-                  onMouseEnter={() => setSelectedSlice(allocation)}
-                  onMouseLeave={() => setSelectedSlice(null)}
-                />
-              );
-            })}
-          </div>
-          
+        <svg className="h-full w-full" viewBox="0 0 200 200">
+          {allocations.map((allocation, index) => {
+            // Calculate angles
+            const startAngle = allocations
+              .slice(0, index)
+              .reduce((sum, curr) => sum + (curr.value / total) * 360, 0);
+            const endAngle = startAngle + (allocation.value / total) * 360;
+
+            // Convert to radians
+            const startRad = (startAngle - 90) * (Math.PI / 180);
+            const endRad = (endAngle - 90) * (Math.PI / 180);
+
+            // Calculate arc points
+            const radius = 100;
+            const x1 = 100 + radius * Math.cos(startRad);
+            const y1 = 100 + radius * Math.sin(startRad);
+            const x2 = 100 + radius * Math.cos(endRad);
+            const y2 = 100 + radius * Math.sin(endRad);
+
+            const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+
+            // Create path for pie slice
+            const pathData = [
+              `M 100 100`,           // Move to center
+              `L ${x1} ${y1}`,       // Line to start of arc
+              `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`, // Arc
+              `Z`                    // Close path back to center
+            ].join(' ');
+
+            return (
+              <path
+                key={allocation.label}
+                d={pathData}
+                fill={getAllocationColor(allocation.label)}
+                className="cursor-pointer transition-opacity hover:opacity-80"
+                onMouseEnter={() => setSelectedSlice(allocation)}
+                onMouseLeave={() => setSelectedSlice(null)}
+              />
+            );
+          })}
+
           {/* Center circle */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white shadow-sm">
-              <p className="text-xs text-gray-500">Total</p>
-              <p className="text-sm font-medium text-gray-900">{formatCurrency(total)}</p>
-            </div>
+          <circle cx="100" cy="100" r="50" fill="white" />
+        </svg>
+
+        {/* Center text */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center justify-center">
+            <p className="text-xs text-gray-500">Total</p>
+            <p className="text-sm font-medium text-gray-900">{formatCurrency(total)}</p>
           </div>
         </div>
         

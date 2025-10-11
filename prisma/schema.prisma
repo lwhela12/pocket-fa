@@ -24,6 +24,8 @@ model User {
   assets            Asset[]
   debts             Debt[]
   expenseRecords    ExpenseRecord[]
+  expenses          Expense[]
+  bankStatements    BankStatement[]
   insurancePolicies InsurancePolicy[]
   financialGoals    FinancialGoal[]
   Statement         Statement[]
@@ -95,10 +97,11 @@ model Debt {
 }
 
 model ExpenseRecord {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isDetailed    Boolean  @default(false)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month         DateTime  // which month this record is for
+  isDetailed    Boolean   @default(false)
   totalMonthly  Float?
   housing       Float?
   utilities     Float?
@@ -108,8 +111,11 @@ model ExpenseRecord {
   healthcare    Float?
   entertainment Float?
   miscellaneous Float?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  expenses      Expense[] // individual expense items
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, month])
 }
 
 model InsurancePolicy {
@@ -135,4 +141,45 @@ model FinancialGoal {
   priority      Int       @default(1) // 1 (highest) to 5 (lowest)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Expense {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenseRecordId String?
+  expenseRecord   ExpenseRecord? @relation(fields: [expenseRecordId], references: [id], onDelete: Cascade)
+  description     String
+  amount          Float
+  category        String // Housing, Utilities, Groceries, Dining, Transport, Healthcare, Entertainment, Miscellaneous
+  frequency       String // one-time, weekly, monthly, quarterly, annually
+  date            DateTime
+  merchant        String?
+  isRecurring     Boolean        @default(false)
+  sourceType      String?        @default("manual") // "manual", "bank_import", "quick_entry"
+  bankStatementId String?
+  bankStatement   BankStatement? @relation(fields: [bankStatementId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId, date])
+  @@index([category])
+}
+
+model BankStatement {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName         String
+  filePath         String    @unique
+  month            DateTime
+  totalExpenses    Float
+  transactionCount Int
+  status           String    @default("PROCESSING") // PROCESSING, COMPLETED, FAILED
+  error            String?
+  expenses         Expense[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId, month])
 }
