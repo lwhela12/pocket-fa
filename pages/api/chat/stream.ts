@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, authenticate } from '../../../lib/api-utils';
 import { startChat, sendMessageStream } from '../../../lib/gemini-service';
 import prisma from '../../../lib/prisma';
+import { buildFinancialContext, formatFinancialContextForChat } from '../../../lib/financial-context-builder';
 
 export default createApiHandler<void>(async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -11,44 +12,60 @@ export default createApiHandler<void>(async (req: NextApiRequest, res: NextApiRe
   const userId = await authenticate(req);
   const { message, history = [], statementId } = req.body as { message: string; history?: any[]; statementId?: string };
 
-  const profilePromise = prisma.profile.findUnique({ where: { userId } });
+  // Build comprehensive financial context
+  const financialContext = await buildFinancialContext(userId);
+  const financialContextJson = formatFinancialContextForChat(financialContext);
+
   let systemPrompt: string;
 
+  // Build base system prompt with comprehensive financial data
+  systemPrompt = `You are PocketFA, a comprehensive financial advisor with access to the user's complete financial profile.
+
+Here is the user's complete financial data:
+
+\`\`\`json
+${financialContextJson}
+\`\`\`
+
+This data includes:
+- User profile (age, retirement plans, risk tolerance)
+- Complete asset portfolio with balances and contribution details
+- All debts/liabilities with payment schedules
+- Financial goals with progress tracking
+- Monthly expense breakdown and spending patterns
+- Insurance coverage
+- 30-year financial projections
+- Current asset allocation
+
+Use this data to provide personalized, actionable financial advice. When answering questions:
+- Reference specific numbers from their actual financial data
+- Provide context-aware recommendations based on their goals, risk tolerance, and current situation
+- Suggest concrete action items when appropriate
+- Be encouraging but realistic about their financial progress
+`;
+
+  // If reviewing a specific statement, add that context
   if (statementId) {
     const statement = await prisma.statement.findFirst({ where: { id: statementId, userId } });
     if (!statement || statement.status !== 'COMPLETED' || !statement.parsedData) {
       return res.status(404).json({ success: false, error: 'Statement not found or not processed.' });
     }
-    systemPrompt = `You are a financial advisor reviewing a specific document. The user has uploaded a statement from ${statement.brokerageCompany}. Here is the data extracted from it:\n\n${JSON.stringify(statement.parsedData, null, 2)}\n\nAnswer the user's questions about this document.`;
+    systemPrompt += `\n\nThe user is currently reviewing a specific document from ${statement.brokerageCompany}. Here is the data extracted from it:\n\n${JSON.stringify(statement.parsedData, null, 2)}\n\nFocus on answering questions about this specific document while keeping their overall financial picture in mind.`;
   } else {
+    // Add uploaded statements context if available
     const statements = await prisma.statement.findMany({
       where: { userId, status: 'COMPLETED' },
       select: { fileName: true, brokerageCompany: true, parsedData: true },
     });
-    if (statements.length === 0) {
-      systemPrompt = 'You are PocketFA, a helpful financial assistant. The user has not uploaded any statements yet. Politely ask them to upload a document to get started.';
-    } else {
+
+    if (statements.length > 0) {
       const fullPayload = statements.map(s => ({
         fileName: s.fileName,
         brokerageCompany: s.brokerageCompany,
         parsedData: s.parsedData,
       }));
-      console.log('Statements fetched for holistic review (raw):', JSON.stringify(fullPayload, null, 2));
-      const jsonBlob = JSON.stringify(fullPayload, null, 2);
-      systemPrompt = `You are PocketFA, a financial advisor. The user has uploaded the following parsed JSON data for all statements:
-
-\`\`\`json
-${jsonBlob}
-\`\`\`
-
-Answer the user's questions based on this data.`;
+      systemPrompt += `\n\nThe user has also uploaded ${statements.length} financial statement(s) with detailed portfolio data:\n\n\`\`\`json\n${JSON.stringify(fullPayload, null, 2)}\n\`\`\``;
     }
-  }
-
-  const profile = await profilePromise;
-  if (profile) {
-    const details = `The user is ${profile.age ?? 'unknown age'} years old, plans to retire at ${profile.retirementAge ?? 'an unknown age'}, and has a '${profile.riskTolerance ?? 'Moderate'}' risk tolerance.`;
-    systemPrompt = `${details}\n\n${systemPrompt}`;
   }
 
   const aiHistory = history.map(msg => ({
