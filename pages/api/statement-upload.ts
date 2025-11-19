@@ -78,7 +78,7 @@ function scrubPii(data: StatementSummary) {
     for (const acct of accounts) {
       delete (acct as any).account_holder;
       if (acct.account_number) {
-        acct.account_number = maskAccountNumber(acct.account_number);
+        (acct as any).account_number = maskAccountNumber(acct.account_number);
       }
     }
   };
@@ -229,8 +229,8 @@ async function analyzeWithGeminiFromS3(s3Key: string): Promise<StatementSummary>
       const rawText = result.response.text().trim();
       console.log('--- Received Raw Response from Gemini ---');
       console.log(rawText);
-  
-      const jsonMatch = rawText.match(/```json\s*([\s\S]*?)```/s);
+
+      const jsonMatch = rawText.match(/```json\s*([\s\S]*?)```/);
       const jsonString = jsonMatch ? jsonMatch[1] : rawText;
   
       if (!jsonString) {

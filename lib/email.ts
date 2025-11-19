@@ -1,8 +1,19 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = 'Pocket Financial Advisor <onboarding@resend.dev>'; // Change this to your verified domain
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+// Lazy initialization to avoid errors when API key is not set
+let resend: Resend | null = null;
+function getResendClient(): Resend {
+  if (!resend && process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  if (!resend) {
+    throw new Error('Resend client not initialized - API key missing');
+  }
+  return resend;
+}
 
 /**
  * Send email verification email to user
@@ -24,7 +35,8 @@ export async function sendVerificationEmail(
   const verificationUrl = `${APP_URL}/api/auth/verify-email?token=${verificationToken}`;
 
   try {
-    await resend.emails.send({
+    const client = getResendClient();
+    await client.emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your email - Pocket Financial Advisor',
@@ -51,7 +63,8 @@ export async function sendWelcomeEmail(
   }
 
   try {
-    await resend.emails.send({
+    const client = getResendClient();
+    await client.emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Welcome to Pocket Financial Advisor!',

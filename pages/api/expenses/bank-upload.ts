@@ -281,15 +281,6 @@ async function processBankStatementInBackground(statementId: string, s3Key: stri
         error: error.message
       },
     });
-  } catch (error: any) {
-    console.error(`[Background] Error processing bank statement ${statementId}:`, error);
-    await prisma.bankStatement.update({
-      where: { id: statementId },
-      data: {
-        status: 'FAILED',
-        error: error.message
-      },
-    });
 
     // Clean up S3 file on failure
     try {
