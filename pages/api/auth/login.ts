@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import * as argon2 from 'argon2';
 import { sign } from 'jsonwebtoken';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
+import { checkRateLimit, authRateLimiter } from '../../../lib/rate-limit';
 import prisma from '../../../lib/prisma';
 
 type LoginResponse = {
@@ -20,6 +21,12 @@ export default createApiHandler<LoginResponse>(async (
 ) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  // Apply rate limiting to prevent brute force attacks
+  const rateLimitPassed = await checkRateLimit(req, res, authRateLimiter);
+  if (!rateLimitPassed) {
+    return; // Response already sent by checkRateLimit
   }
 
   const { email, password } = req.body;
@@ -48,9 +55,21 @@ export default createApiHandler<LoginResponse>(async (
     // Create JWT token
     const secret = process.env.JWT_SECRET || '';
     const token = sign({ id: user.id }, secret, { expiresIn: '30m' });
-    
-    // Create refresh token (in a real app, this would be stored in the database)
-    const refreshToken = sign({ id: user.id }, secret, { expiresIn: '7d' });
+
+    // Create and store refresh token in database
+    const refreshTokenValue = sign({ id: user.id }, secret, { expiresIn: '7d' });
+    const refreshTokenExpiry = new Date();
+    refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7); // 7 days from now
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: refreshTokenValue,
+        expiresAt: refreshTokenExpiry,
+      },
+    });
+
+    const refreshToken = refreshTokenValue;
 
     return res.status(200).json({
       success: true,

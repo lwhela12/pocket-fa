@@ -20,21 +20,29 @@ export default createApiHandler<MFASetupResponse>(async (
 
     const { mfaType, phoneNumber, mfaSecret } = req.body;
 
-    if (!mfaType || (mfaType === 'sms' && !phoneNumber) || (mfaType === 'app' && !mfaSecret)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'MFA type and corresponding details are required' 
+    // SMS MFA is disabled until proper SMS provider integration (Twilio, AWS SNS, etc.)
+    if (mfaType === 'sms') {
+      return res.status(400).json({
+        success: false,
+        error: 'SMS MFA is currently unavailable. Please use authenticator app instead.'
       });
     }
 
-    // Update user's MFA settings
+    if (!mfaType || (mfaType === 'app' && !mfaSecret)) {
+      return res.status(400).json({
+        success: false,
+        error: 'MFA type and corresponding details are required'
+      });
+    }
+
+    // Update user's MFA settings (only app-based TOTP is currently supported)
     await prisma.user.update({
       where: { id: userId },
       data: {
         mfaEnabled: true,
-        mfaType,
-        phoneNumber: mfaType === 'sms' ? phoneNumber : null,
-        mfaSecret: mfaType === 'app' ? mfaSecret : null,
+        mfaType: 'app',
+        phoneNumber: null,
+        mfaSecret: mfaSecret,
       },
     });
 

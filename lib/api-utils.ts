@@ -25,11 +25,6 @@ export function createApiHandler<T = any>(
 
 export function verifyToken(token: string): { id: string } {
   try {
-    // If we're in development mode and using the dev token, accept it
-    if (process.env.NODE_ENV === 'development' && token === 'dev-token') {
-      return { id: '123' };
-    }
-    
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error('Missing JWT_SECRET environment variable');
@@ -43,16 +38,11 @@ export function verifyToken(token: string): { id: string } {
 
 export async function authenticate(req: NextApiRequest): Promise<string> {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // If we're in development mode, allow missing auth header
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode: using mock user ID for missing auth header');
-      return '123';
-    }
     throw new Error('Authorization header is required');
   }
-  
+
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
   const decoded = verifyToken(token);
   return decoded.id;
@@ -74,16 +64,11 @@ export const fetchApi = async <T = any>(
       if (tokenData) {
         token = tokenData;
       }
-      
+
       // Get user data from localStorage
       const userData = localStorage.getItem('user');
       if (userData) {
         user = JSON.parse(userData);
-      }
-      
-      // For development fallback
-      if (!token && process.env.NODE_ENV === 'development') {
-        token = 'dev-token';
       }
     }
     

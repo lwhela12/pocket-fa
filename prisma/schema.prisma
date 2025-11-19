@@ -11,24 +11,41 @@ datasource db {
 }
 
 model User {
-  id                String            @id @default(uuid())
-  email             String            @unique
-  password          String
-  mfaEnabled        Boolean           @default(false)
-  mfaType           String? // "sms" or "app"
-  phoneNumber       String?
-  mfaSecret         String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  profile           Profile?
-  assets            Asset[]
-  debts             Debt[]
-  expenseRecords    ExpenseRecord[]
-  expenses          Expense[]
-  bankStatements    BankStatement[]
-  insurancePolicies InsurancePolicy[]
-  financialGoals    FinancialGoal[]
-  Statement         Statement[]
+  id                      String            @id @default(uuid())
+  email                   String            @unique
+  password                String
+  emailVerified           Boolean           @default(false)
+  verificationToken       String?
+  verificationTokenExpiry DateTime?
+  mfaEnabled              Boolean           @default(false)
+  mfaType                 String? // "sms" or "app"
+  phoneNumber             String?
+  mfaSecret               String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  profile                 Profile?
+  assets                  Asset[]
+  debts                   Debt[]
+  expenseRecords          ExpenseRecord[]
+  expenses                Expense[]
+  bankStatements          BankStatement[]
+  insurancePolicies       InsurancePolicy[]
+  financialGoals          FinancialGoal[]
+  Statement               Statement[]
+  refreshTokens           RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+  @@index([token])
 }
 
 model Profile {
@@ -100,7 +117,7 @@ model ExpenseRecord {
   id            String    @id @default(uuid())
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  month         DateTime  // which month this record is for
+  month         DateTime // which month this record is for
   isDetailed    Boolean   @default(false)
   totalMonthly  Float?
   housing       Float?

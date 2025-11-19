@@ -1,12 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, ApiResponse, authenticate } from '../../lib/api-utils';
+import { checkRateLimit, aiRateLimiter } from '../../lib/rate-limit';
+import { uploadToS3, generateS3Key, deleteFromS3 } from '../../lib/s3';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import fs from 'fs';
-import path from 'path';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import prisma from '../../lib/prisma';
 import { Statement } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import statementStatusEmitter from '../../lib/events';
+
+// S3 client for downloading files during processing
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      }
+    : undefined,
+});
 
 // --- Start of New Type Definitions ---
 export interface Holding {
@@ -81,11 +94,11 @@ function scrubPii(data: StatementSummary) {
 const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// This function now runs in the background and does not block the API response
-async function processStatementInBackground(statementId: string, filePath: string) {
+// This function runs in the background and processes the statement from S3
+async function processStatementInBackground(statementId: string, s3Key: string) {
   try {
     console.log(`[Background] Starting analysis for statement: ${statementId}`);
-    const parsedData = await analyzeWithGemini(filePath);
+    const parsedData = await analyzeWithGeminiFromS3(s3Key);
     scrubPii(parsedData);
 
     await prisma.statement.update({
@@ -106,22 +119,44 @@ async function processStatementInBackground(statementId: string, filePath: strin
       data: { status: 'FAILED', error: error.message },
     });
     statementStatusEmitter.emit('statusUpdate', { statementId, status: 'FAILED' });
-  } finally {
+
+    // Clean up S3 file on failure
     try {
-      await fs.promises.unlink(filePath);
-      console.log(`[Background] Deleted temp file ${filePath}`);
+      await deleteFromS3(s3Key);
+      console.log(`[Background] Deleted failed statement from S3: ${s3Key}`);
     } catch (err) {
-      console.error(`[Background] Failed to delete temp file ${filePath}:`, err);
+      console.error(`[Background] Failed to delete S3 file ${s3Key}:`, err);
     }
   }
 }
 
-async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
-    // ... existing analyzeWithGemini function ...
-    // (No changes needed here)
-    if (!API_KEY) throw new Error('Gemini API key not configured');
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+// Download file from S3 and analyze with Gemini
+async function analyzeWithGeminiFromS3(s3Key: string): Promise<StatementSummary> {
+  if (!API_KEY) throw new Error('Gemini API key not configured');
+
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('AWS_S3_BUCKET_NAME environment variable is not set');
+  }
+
+  // Download file from S3
+  const getCommand = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: s3Key,
+  });
+
+  const s3Response = await s3Client.send(getCommand);
+
+  // Convert stream to buffer
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of s3Response.Body as any) {
+    chunks.push(chunk);
+  }
+  const fileBuffer = Buffer.concat(chunks);
+
+  // Analyze with Gemini
+  const genAI = new GoogleGenerativeAI(API_KEY);
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
   
     const prompt = `
       You are an expert financial statement parser for a tool called Pocket Financial Advisor.
@@ -184,13 +219,12 @@ async function analyzeWithGemini(filePath: string): Promise<StatementSummary> {
       Now, process the attached PDF and provide ONLY the JSON output.
     `;
   
-    console.log('--- Sending Final Prompt to Gemini ---');
-  
-    try {
-      const fileBuffer = await fs.promises.readFile(filePath);
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'application/pdf', data: fileBuffer.toString('base64') } }, { text: prompt }] }],
-      });
+  console.log('--- Sending Final Prompt to Gemini ---');
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'application/pdf', data: fileBuffer.toString('base64') } }, { text: prompt }] }],
+    });
   
       const rawText = result.response.text().trim();
       console.log('--- Received Raw Response from Gemini ---');
@@ -216,6 +250,13 @@ export default createApiHandler<Statement>(async (req: NextApiRequest, res: Next
   }
 
   const userId = await authenticate(req);
+
+  // Apply rate limiting to control AI API costs and prevent abuse
+  const rateLimitPassed = await checkRateLimit(req, res, aiRateLimiter);
+  if (!rateLimitPassed) {
+    return; // Response already sent by checkRateLimit
+  }
+
   const { file, filename } = req.body as { file?: string; filename?: string };
 
   if (!file || !filename) {
@@ -226,26 +267,35 @@ export default createApiHandler<Statement>(async (req: NextApiRequest, res: Next
   }
 
   const statementId = randomUUID();
-  const destPath = path.join('/tmp', `${statementId}.pdf`);
   const buffer = Buffer.from(file, 'base64');
-  await fs.promises.writeFile(destPath, buffer);
+
+  // Generate S3 key and upload file
+  const s3Key = generateS3Key(userId, filename, 'statements');
+
+  try {
+    await uploadToS3(buffer, s3Key, 'application/pdf');
+  } catch (error: any) {
+    console.error('S3 upload error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to upload file to storage' });
+  }
 
   const statementRecord = await prisma.statement.create({
     data: {
       id: statementId,
       userId,
       fileName: filename,
-      filePath: destPath,
+      filePath: s3Key, // Store S3 key instead of local path
       status: 'PROCESSING',
     },
   });
 
   try {
     res.status(202).json({ success: true, data: statementRecord });
-    processStatementInBackground(statementRecord.id, destPath);
+    processStatementInBackground(statementRecord.id, s3Key);
   } catch (error: any) {
-    fs.promises.unlink(destPath).catch(() => {});
-    console.error('Statement upload file handling error:', error);
+    // Clean up S3 file on error
+    deleteFromS3(s3Key).catch(() => {});
+    console.error('Statement upload handling error:', error);
     return res.status(500).json({ success: false, error: 'Could not process the uploaded file.' });
   }
 });

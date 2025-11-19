@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, authenticate } from '../../../lib/api-utils';
+import { checkRateLimit, aiRateLimiter } from '../../../lib/rate-limit';
 import { startChat, sendMessageStream } from '../../../lib/gemini-service';
 import prisma from '../../../lib/prisma';
 import { buildFinancialContext, formatFinancialContextForChat } from '../../../lib/financial-context-builder';
@@ -10,6 +11,12 @@ export default createApiHandler<void>(async (req: NextApiRequest, res: NextApiRe
   }
 
   const userId = await authenticate(req);
+
+  // Apply rate limiting to control AI API costs (20 requests per hour)
+  const rateLimitPassed = await checkRateLimit(req, res, aiRateLimiter);
+  if (!rateLimitPassed) {
+    return; // Response already sent by checkRateLimit
+  }
   const { message, history = [], statementId } = req.body as { message: string; history?: any[]; statementId?: string };
 
   // Build comprehensive financial context

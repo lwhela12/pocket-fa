@@ -1,15 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as argon2 from 'argon2';
-import { sign } from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import { createApiHandler, ApiResponse } from '../../../lib/api-utils';
+import { checkRateLimit, authRateLimiter } from '../../../lib/rate-limit';
+import { sendVerificationEmail } from '../../../lib/email';
 import prisma from '../../../lib/prisma';
 
 type RegisterResponse = {
   user: {
     id: string;
     email: string;
+    emailVerified: boolean;
   };
-  token: string;
+  message: string;
 };
 
 export default createApiHandler<RegisterResponse>(async (
@@ -18,6 +21,12 @@ export default createApiHandler<RegisterResponse>(async (
 ) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  // Apply rate limiting to prevent spam registrations
+  const rateLimitPassed = await checkRateLimit(req, res, authRateLimiter);
+  if (!rateLimitPassed) {
+    return; // Response already sent by checkRateLimit
   }
 
   const { email, password } = req.body;
@@ -43,17 +52,29 @@ export default createApiHandler<RegisterResponse>(async (
     // Hash password using argon2 (salt handled automatically)
     const hashedPassword = await argon2.hash(password);
 
+    // Generate verification token (32 bytes = 64 hex characters)
+    const verificationToken = randomBytes(32).toString('hex');
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24); // 24 hours from now
+
     // Create user
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
+        emailVerified: false,
+        verificationToken,
+        verificationTokenExpiry,
       },
     });
 
-    // Create JWT token
-    const secret = process.env.JWT_SECRET || '';
-    const token = sign({ id: user.id }, secret, { expiresIn: '30m' });
+    // Send verification email
+    try {
+      await sendVerificationEmail(user.email, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail registration if email fails, user can resend
+    }
 
     return res.status(201).json({
       success: true,
@@ -61,8 +82,9 @@ export default createApiHandler<RegisterResponse>(async (
         user: {
           id: user.id,
           email: user.email,
+          emailVerified: user.emailVerified,
         },
-        token,
+        message: 'Registration successful! Please check your email to verify your account.',
       },
     });
   } catch (error) {

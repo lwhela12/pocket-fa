@@ -1,11 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiHandler, ApiResponse, authenticate } from '../../../lib/api-utils';
+import { uploadToS3, generateS3Key, deleteFromS3 } from '../../../lib/s3';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import fs from 'fs';
-import path from 'path';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import prisma from '../../../lib/prisma';
 import { BankStatement, Expense } from '@prisma/client';
 import { randomUUID } from 'crypto';
+
+// S3 client for downloading files during processing
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      }
+    : undefined,
+});
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const MODEL_NAME = 'gemini-2.0-flash-exp';
@@ -37,8 +48,28 @@ const EXPENSE_CATEGORIES = [
   'Miscellaneous',
 ];
 
-async function parseAndCategorizeStatement(filePath: string, fileType: string): Promise<BankStatementData> {
+async function parseAndCategorizeStatement(s3Key: string, fileType: string): Promise<BankStatementData> {
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+
+  if (!bucketName) {
+    throw new Error('AWS_S3_BUCKET_NAME environment variable is not set');
+  }
+
+  // Download file from S3
+  const getCommand = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: s3Key,
+  });
+
+  const s3Response = await s3Client.send(getCommand);
+
+  // Convert stream to buffer
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of s3Response.Body as any) {
+    chunks.push(chunk);
+  }
+  const fileBuffer = Buffer.concat(chunks);
 
   const prompt = `You are an expert at parsing bank statements and categorizing expenses.
 
@@ -74,14 +105,13 @@ Respond with ONLY a JSON object in this format:
     let result;
 
     if (fileType === 'csv') {
-      const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+      const fileContent = fileBuffer.toString('utf-8');
       result = await model.generateContent([
         { text: prompt },
         { text: `\n\nCSV Content:\n${fileContent}` }
       ]);
     } else {
       // PDF
-      const fileBuffer = await fs.promises.readFile(filePath);
       result = await model.generateContent({
         contents: [{
           role: 'user',
@@ -129,11 +159,11 @@ Respond with ONLY a JSON object in this format:
   }
 }
 
-async function processBankStatementInBackground(statementId: string, filePath: string, fileType: string) {
+async function processBankStatementInBackground(statementId: string, s3Key: string, fileType: string) {
   try {
     console.log(`[Background] Starting bank statement analysis: ${statementId}`);
 
-    const parsedData = await parseAndCategorizeStatement(filePath, fileType);
+    const parsedData = await parseAndCategorizeStatement(s3Key, fileType);
 
     // Get statement record
     const statement = await prisma.bankStatement.findUnique({
@@ -251,13 +281,22 @@ async function processBankStatementInBackground(statementId: string, filePath: s
         error: error.message
       },
     });
-  } finally {
-    // Clean up file
+  } catch (error: any) {
+    console.error(`[Background] Error processing bank statement ${statementId}:`, error);
+    await prisma.bankStatement.update({
+      where: { id: statementId },
+      data: {
+        status: 'FAILED',
+        error: error.message
+      },
+    });
+
+    // Clean up S3 file on failure
     try {
-      await fs.promises.unlink(filePath);
-      console.log(`[Background] Deleted temp file ${filePath}`);
+      await deleteFromS3(s3Key);
+      console.log(`[Background] Deleted failed bank statement from S3: ${s3Key}`);
     } catch (err) {
-      console.error(`[Background] Failed to delete temp file ${filePath}:`, err);
+      console.error(`[Background] Failed to delete S3 file ${s3Key}:`, err);
     }
   }
 }
@@ -298,9 +337,17 @@ export default createApiHandler<BankStatement>(async (
     }
 
     const statementId = randomUUID();
-    const destPath = path.join('/tmp', `bank-${statementId}.${fileType}`);
     const buffer = Buffer.from(file, 'base64');
-    await fs.promises.writeFile(destPath, buffer);
+
+    // Generate S3 key and upload file
+    const s3Key = generateS3Key(userId, filename, 'bank-statements');
+
+    try {
+      await uploadToS3(buffer, s3Key, mimeType);
+    } catch (error: any) {
+      console.error('S3 upload error:', error);
+      return res.status(500).json({ success: false, error: 'Failed to upload file to storage' });
+    }
 
     // Create bank statement record
     const statementRecord = await prisma.bankStatement.create({
@@ -308,7 +355,7 @@ export default createApiHandler<BankStatement>(async (
         id: statementId,
         userId,
         fileName: filename,
-        filePath: destPath,
+        filePath: s3Key, // Store S3 key instead of local path
         month: new Date(), // Will be updated during processing
         totalExpenses: 0,
         transactionCount: 0,
@@ -318,7 +365,7 @@ export default createApiHandler<BankStatement>(async (
 
     // Start background processing
     res.status(202).json({ success: true, data: statementRecord });
-    processBankStatementInBackground(statementId, destPath, fileType);
+    processBankStatementInBackground(statementId, s3Key, fileType);
 
     return;
   }
